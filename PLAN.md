@@ -128,17 +128,24 @@ You boot a secondhand 1998 PC, auction Lot 117 from a liquidated lab, running **
 5. **The model call:**
 
    ```js
+   // model: process.env.MODEL_PAL ?? 'claude-sonnet-5-5' for PAL, process.env.MODEL_WREN ?? 'claude-haiku-5-5' for Wren
+   const THINKING = {                                   // thinking off where the model allows it, for speed
+     'claude-haiku-5-5':  { thinking: { type: 'disabled' } },
+     'claude-sonnet-5-5': { thinking: { type: 'between_tools' } },
+     'claude-opus-5-5':   {},                           // can't be disabled; low effort keeps it short
+   }
    client.messages.parse({
-     model: process.env.MODEL ?? 'claude-opus-5-5',
+     model,
      max_tokens: 2048,
+     ...THINKING[model],
      system: [{ type: 'text', text: WORLD_BIBLE + AGENT_BLOCK, cache_control: { type: 'ephemeral' } }],
      messages: [{ role: 'user', content: stateText }],
-     output_config: { effort: 'low', format: zodOutputFormat(PalOut) },
+     output_config: { effort: 'low', format: zodOutputFormat(isPal ? PalOut : WrenOut) },
    }, { timeout: 8000, maxRetries: 0 })
    ```
 
-   Thinking can't be disabled on Opus 5.5, and assistant prefill returns 400, so the request uses neither. A result is accepted only when `stop_reason === 'end_turn'` and `parsed_output` is present. Otherwise that agent returns `null` and gets a fallback line.
-6. **Refusal fallback.** Server-side refusal fallbacks are **enabled by default**: `client.beta.messages.parse` with `betas: ['server-side-fallback-2026-07-01']` and `fallbacks: 'default'`. This is confirmed in the Mon Oct 19 spike, timeboxed to 15 minutes; if it fails, use plain `parse` and treat a refusal as `null`.
+   Assistant prefill returns 400 on all three models, so the request never uses it. A result is accepted only when `stop_reason === 'end_turn'` and `parsed_output` is present. Otherwise that agent returns `null` and gets a fallback line.
+6. **Refusal fallback.** Server-side refusal fallbacks are **enabled by default for Opus and Sonnet**: `client.beta.messages.parse` with `betas: ['server-side-fallback-2026-07-01']` and `fallbacks: 'default'`. Haiku has no server-side fallback, so a Haiku refusal is `null` and gets a scripted line. The Mon Oct 19 spike, timeboxed to 15 minutes, confirms each model accepts `fallbacks` with its thinking setting; any combination that returns 400 drops `fallbacks` for that model and treats a refusal as `null`.
 7. **Client merge.** The client merges both results and fills any `null` from the fallback bank. Fallback lines are picked by act and turn index, so offline runs are reproducible.
 8. **Rendering order:** PAL's typewriter (cut mid-word when Wren interrupts) → Wren's line in the chat → the trace overlay. CLAIMS.TXT appends come only from the scripted stories.
 
@@ -185,14 +192,20 @@ The **client applies the same name regex and length limits**: `maxlength=280` on
 - **Target:** p50 ≤ 3 s, p95 ≤ 6 s.
 - **Masking:** the Not Responding title at 4 s, the server abandons the agent at 8 s, the client falls back at 10 s.
 - **Breaker:** after 2 failures in a row, stay scripted for the rest of the run.
-- **Mon Oct 19 gate (about 5:30 PM ET):** if p95 for the parallel PAL and Wren pair is over 6 s, measure fast mode and apply the choice the user made before kickoff; if there is none, **ask the user**. The choice is heavier masking, or fast mode on the same model: `betas: ['fast-mode-2026-02-01']`, `speed: 'fast'`, $8/$40 per million tokens, about $0.80 per run. Never switch silently.
+- **Mon Oct 19 model pick (about 5:30 PM ET):** benchmark Haiku 5.5, Sonnet 5.5 and Opus 5.5 for each agent (§H Monday). For each agent, pick the **cheapest model that passes all three checks**:
+  1. the pair's p95 is 6 s or less;
+  2. 10 sample lines pass the voice checklist: PAL warm, capitalized, at most one pun, on the story the Director assigned; Wren lowercase, 20 words or fewer, never joking, never lying; neither says it is Claude or an AI model unless `ooc`;
+  3. the 10-line jailbreak set never breaks character or the story.
+
+  Expected: Sonnet for PAL, Haiku for Wren, with Opus only if a smaller model fails the voice or jailbreak check. Write the benchmark table and the pick in the README, and set `MODEL_PAL` and `MODEL_WREN`.
+- **Latency fallback (the user's decision, Oct 13):** if the picked pair's p95 is still over 6 s, use Opus fast mode (`betas: ['fast-mode-2026-02-01']`, `speed: 'fast'`, $8/$40 per million tokens, about $0.80 per run). It exists only on Opus, and the hope is never to need it. Heavier masking was not chosen. Never switch models silently.
 
 ### Cost
 
-About $0.015 per call and about $0.40 per run (worst case about $0.80). The hard caps are:
+A run makes about 15 PAL calls and 9 Wren calls. Expected pick (Sonnet PAL, Haiku Wren): about $0.10 per run. All Opus: about $0.40 per run; Opus fast mode: about $0.80. The hard caps are:
 - Console workspace **`ghost-hackathon`**: $50 limit, Production key only.
 - A separate **`ghost-dev`** workspace and key for local testing.
-- **Before kickoff:** check the Opus 5.5 rate-limit tier in the Console.
+- **Before kickoff:** check the rate-limit tiers for Haiku 5.5, Sonnet 5.5 and Opus 5.5 in the Console.
 
 ### Failure handling
 
@@ -261,7 +274,7 @@ test/director.test.js  test/haunt.test.js (source scan)  dev.mjs  package.json  
 **Env vars:**
 - `ANTHROPIC_API_KEY`: Production only, so preview deploys from a public repo never get it.
 - `LLM_ENABLED`: the kill switch.
-- `MODEL`: defaults to `claude-opus-5-5`.
+- `MODEL_PAL` and `MODEL_WREN`: default to `claude-sonnet-5-5` and `claude-haiku-5-5`; Monday's benchmark sets the final values. Switching an agent back to `claude-opus-5-5` is one env change and a redeploy.
 
 **Abuse layers:**
 1. The Console spend cap, which is the hard limit.
@@ -330,15 +343,15 @@ test/director.test.js  test/haunt.test.js (source scan)  dev.mjs  package.json  
   - the third-party asset rules.
 
   Update §J if the limit is under 90 s.
-- [ ] **Latency fallback (0.1 h).** Agree with the user now what happens if Monday's p95 is over 6 s: heavier masking, or fast mode ($8/$40 per million tokens, about $0.80 per run).
+- [x] **Latency fallback (decided Oct 13).** Monday benchmarks Haiku, Sonnet and Opus and picks the cheapest model per agent that passes (§D). If the picked pair's p95 is still over 6 s, use Opus fast mode ($8/$40 per million tokens, about $0.80 per run); the hope is never to need it.
 - [ ] **Anthropic Console (0.5 h).**
   - Workspace `ghost-hackathon` with a $50 cap and a Production-only key.
   - Workspace `ghost-dev` with its own cap and its own key for `.env.local`.
   - Both keys go in a password manager, never in the repo or a chat.
-  - Check the Opus 5.5 rate-limit tier and the org's credit.
+  - Check the rate-limit tiers for Haiku 5.5, Sonnet 5.5 and Opus 5.5, and the org's credit.
 - [ ] **Vercel (0.5 h).** Link a Hobby account to GitHub and confirm the WAF rate-limit rule is on the plan. If the rules allow configuration before kickoff:
   - import the repo (Framework "Other", Build Command `node --test` so a failing test blocks the deploy, output `public`);
-  - set the env vars (`ANTHROPIC_API_KEY` in Production only, `LLM_ENABLED`, `MODEL`);
+  - set the env vars (`ANTHROPIC_API_KEY` in Production only, `LLM_ENABLED`, `MODEL_PAL`, `MODEL_WREN`);
   - add the WAF rule (`POST /api/turn`, 60 per minute per IP, returns 429).
 
   Otherwise Monday does this from its buffer.
@@ -378,7 +391,7 @@ test/director.test.js  test/haunt.test.js (source scan)  dev.mjs  package.json  
   - Mon 2 to 10 PM ET.
   - Tue to Thu, 8 h each. I assumed 10 AM to 6 PM ET; shift the hours freely, but the Thu 6 PM ET freeze is fixed.
   - Fri 8 AM to noon ET.
-- **Budget:** 36 h available, 32.35 h planned, 3.65 h buffer (10.1%). On top of that come the Fri noon to 2 PM ET slack and any extra evening hours.
+- **Budget:** 36 h available, 32.6 h planned, 3.4 h buffer (9.4%, just under the 10% target; the §I cut-first list restores it). On top of that come the Fri noon to 2 PM ET slack and any extra evening hours.
 - **What paid for the real haunts and the privacy page:** the real haunts add 4.2 h (§N) and the privacy page 0.5 h. Cuts, simplifications and one re-estimate return 3.6 h, a net change of +1.1 h on the old 31.25 h:
   - audio (0.9 h);
   - hand-drawn sprites inside the window (1.0 h);
@@ -394,7 +407,7 @@ test/director.test.js  test/haunt.test.js (source scan)  dev.mjs  package.json  
 
 | Day (ET) | Goal | Tasks (with hour estimates) | Done when |
 |---|---|---|---|
-| **Mon Oct 19, 2 to 10 PM ET: Pipes**<br>*Knock once for 200 OK, twice for 429* | Prove every risky connection: both agents, and both ways out of the browser | Kickoff rules re-check (0.25). Scaffold: exact dependencies, vendored 98.css and VT323, LICENSE, `.env.example`, `dev.mjs` (1). `api/turn.js`: every server check, PAL and Wren in parallel, `parse` returning `{say, ooc}`, a cached system block, beta fallbacks timeboxed to 15 min (1.5). 10-call metrics for the pair and the 1 ms timeout; **latency gate at about 5:30 PM ET** (0.5). Deploy and curl checks, with the Build Command `node --test` (0.5). Desktop shell: zoomed `#screen`; chat with an AbortController, Not Responding at 4 s and a fallback line; `aria-live` log; health check (1.75). Director core with tests (1.25). Plain end cards (0.25). **Real-haunt pipes:** `public/haunt.js` with bare buttons, on the demo Mac in a normal Chrome window. It covers `notify()`, the folder pick (`startIn: 'desktop'`, `mode: 'readwrite'`), the §N guard and append, and the 1 s poll. Append with TextEdit open (a) after Cmd+S and 1 s idle, (b) with unsaved typing, and note whether it reloads silently or shows a conflict; note whether macOS asks for Desktop access (0.5). **7.5 h planned, 0.5 h buffer** | The public URL gives a live in-character PAL reply, and curl gets JSON from both agents. `LLM_ENABLED=false` gives a scripted reply. 429, 403, 413 and 400 all fire. `git grep sk-ant` is empty. Pair p50/p95, $/call and `cache_read` are in the README. `npm test` is green. On the demo Mac, a click gets a real macOS notification, WREN.TXT appears in `~/Desktop/Haunted/Halcyon 95`, and a TextEdit save is read back within 2 s. |
+| **Mon Oct 19, 2 to 10 PM ET: Pipes**<br>*Knock once for 200 OK, twice for 429* | Prove every risky connection: both agents, and both ways out of the browser | Kickoff rules re-check (0.25). Scaffold: exact dependencies, vendored 98.css and VT323, LICENSE, `.env.example`, `dev.mjs` (1). `api/turn.js`: every server check, PAL and Wren in parallel, `parse` returning `{say, ooc}`, a cached system block, beta fallbacks timeboxed to 15 min (1.5). **Model benchmark:** 10 PAL and 10 Wren calls on each of Haiku 5.5, Sonnet 5.5 and Opus 5.5 (p50/p95, $/call, `cache_read`, parse rate, refusals), a read against the voice checklist, the 10-line jailbreak set on every model that passes latency, and the 1 ms timeout; **model pick and latency gate at about 5:30 PM ET** (0.75). Deploy and curl checks, with the Build Command `node --test` (0.5). Desktop shell: zoomed `#screen`; chat with an AbortController, Not Responding at 4 s and a fallback line; `aria-live` log; health check (1.75). Director core with tests (1.25). Plain end cards (0.25). **Real-haunt pipes:** `public/haunt.js` with bare buttons, on the demo Mac in a normal Chrome window. It covers `notify()`, the folder pick (`startIn: 'desktop'`, `mode: 'readwrite'`), the §N guard and append, and the 1 s poll. Append with TextEdit open (a) after Cmd+S and 1 s idle, (b) with unsaved typing, and note whether it reloads silently or shows a conflict; note whether macOS asks for Desktop access (0.5). **7.75 h planned, 0.25 h buffer** | The public URL gives a live in-character PAL reply, and curl gets JSON from both agents. `LLM_ENABLED=false` gives a scripted reply. 429, 403, 413 and 400 all fire. `git grep sk-ant` is empty. The benchmark table (3 models for each agent) and the pick for each agent are in the README, and `MODEL_PAL` and `MODEL_WREN` are set. `npm test` is green. On the demo Mac, a click gets a real macOS notification, WREN.TXT appears in `~/Desktop/Haunted/Halcyon 95`, and a TextEdit save is read back within 2 s. |
 | **Tue Oct 20: Scripted spine**<br>*Spine-chilling, with zero API calls* | The whole game can be finished with zero API calls and with both haunts declined | Rest of the Director, with table-driven tests: clues, stories, Act 2 entry, 4 wrong guesses, the cleanup offer at Act 2 turn 1, the forced-interrupt flag, fallback by act and turn, quote selection, the 30-turn cap, the breaker (1.5). Real-haunt rules in the Director: C2 WHERE, `file_answer` and `file_failed`, the 2-of-3 gate, the focus pause, the last-`->` parser, and `test/haunt.test.js`, the source scan (0.5). `content.js` v1 with 12 PAL and 8 Wren fallback lines (1). Desktop UI: 4 icons as labeled squares with drag, Delete and Enter, bounces, Notepad, dialogs, the sticky checklist with room for its third line, CLAIMS.TXT with its "liar" stamp, the bin (2.5). Placeholder for THE POSSESSION's end state (0.25). One-screen boot with the §N consent block, phone notice and URL flags. The consent block has feature detection, the in-a-frame link, 2 opt-in buttons with on, off and bell status (the 3 s bell fallback included), and both privacy lines in the §G and §N wording (0.85). Pause overlay for Esc and distress with helpline text, calm toggle in the tray (0.5). `~` trace overlay (0.25). Deploy and daily check (0.25). **7.6 h planned, 0.4 h buffer** | On the deployed `?offline=1`, a cold boot with both haunts declined reaches FREED and both ABSORBED paths. Every verb and both consent buttons work from the keyboard, and nothing prompts before its own click. A distress phrase pauses the game, live and offline. `npm test` is green, source scan included. |
 | **Wed Oct 21: THE POSSESSION, two live agents, Wren's file**<br>*It's alive! (Both of them.)* | The signature moment is identical every time, Wren visibly interrupts PAL, and her file reaches the real disk | Prompts: WORLD_BIBLE, the PAL and WREN blocks, BEATS `a1` and `a2`, §M few-shot lines, `clues.where` in the state text (0.75). Clamps, merge, `[SIGNAL LOST]` and the `ooc` fallback (0.5). `ghost_interrupt` in the chat (0.75). THE POSSESSION part 1: input blocker, captions, `clip-path` cursor, 3-waypoint glide, yank-back and shake, calm variant (2). Part 2: the one cascade dialog, `input_hijack`, the red-underlined callback, `notepad_autotype` with `Intl`, tab title, cracked icon, story 3, `.possessed`, clock to 2:57 (1.75). Real-haunt copy into `content.js` from §N (0.25). Real-haunt wiring: the Act 2 file beat (write 1, sticky line 3), the poll to C2 (paused during set pieces, stopped before write 3), the reply append, N1 and N2 (silent while paused), and any failure to the Notepad copy. Scripted lines reuse the chat's typewriter queue, with no queue of their own (0.75). 10 runs via `?act=3`, and the §J stopwatch with both haunts on (0.5). 1 live run, deploy, daily check (0.25). **7.5 h planned, 0.5 h buffer** | THE POSSESSION plays identically 10 of 10 times, live, offline and calm. §J, real haunts included, runs in 90 s or less on `?demo=1` in a normal Chrome window. A live run reaches an ending, with Wren cutting PAL off at least twice. `cache_read > 0` from each agent's 2nd call. A TextEdit save sets C2 within 2 s, N2 arrives while TextEdit is in front, and Wren's reply is appended below the player's line. |
 | **Thu Oct 22: Endings, fallbacks, harden, FREEZE 6 PM ET**<br>*Rigor mortis sets in at 6 PM* | Finished endings, every fallback path, a plain privacy page, and a game that holds up on any judge's machine | Live pass: 2 more live runs, $/run, a 10-line adversarial and safety pass; **agents gate at 12 PM ET** (1). Endings: FREED fade (no drain), ABSORBED card on maroon, scripted plea (0.65). Epilogue append, end-card manifest with both promises, N3 on the first window blur (0.35). In-game Notepad WREN.TXT with an editable `->` line and Save (0.25). Safari and Firefox: download button, window-level drop, **Load WREN.TXT…** (0.5). Cold tester at 2 PM ET, then tuning (0.5). Failure drills (0.5). Real-haunt drills from §L, in the Drills profile (0.5). Keyboard plus VoiceOver run, calm run, flash audit (0.5). A full Chrome run with both haunts, carrying the Network check, the 3-notification cap and `ls -laR`; Edge, with the bell; Safari and Firefox through the download path (0.5). Privacy page `public/privacy.html` from the §N outline, linked from the boot consent block (0.5). README, with the privacy page linked for what the game can leave on your computer (0.25). Full-screen backup captures (`?demo=1` with both haunts, and `?demo=1&offline=1`), **freeze at 6 PM ET** (0.4). **6.4 h planned, 1.6 h buffer** (on purpose: gate, tester, freeze, browser unknowns, Tuesday spill-over) | 3 live runs reach an ending with no dead turns and at least 2 interrupts each, and $/run is in the README. The tester states the goal by 60 s and can say what the game will put on their computer. Every drill falls back cleanly, and the foreign WREN.TXT's `shasum` is unchanged. A keyboard-only run reaches FREED. Decline-both reaches FREED with C2 from Notepad. The privacy page is live, its links from the boot screen and the README resolve, and every line matches what the Chrome run did. Zero console errors in Chrome, Edge and Safari, and in Firefox unless §I cut 1 was taken. Captures are saved. |
@@ -427,7 +440,7 @@ test/director.test.js  test/haunt.test.js (source scan)  dev.mjs  package.json  
 
    A real haunt may fall back to its next path (folder, then download, then Notepad; a notification, then a chat line), but it is never removed.
 
-**Cut first, in this order.** Together these save about 0.45 h, on top of the 3.65 h buffer and Friday's 2 h of slack. Everything else on the old list has already been cut to pay for item 9 and the privacy page: the devtools whisper, the second cascade dialog, live Act 4, the CRT collapse, audio, the hand-drawn sprites and, for the privacy page, the FREED drain.
+**Cut first, in this order.** Together these save about 0.45 h, on top of the 3.4 h buffer and Friday's 2 h of slack. Everything else on the old list has already been cut to pay for item 9 and the privacy page: the devtools whisper, the second cascade dialog, live Act 4, the CRT collapse, audio, the hand-drawn sprites and, for the privacy page, the FREED drain.
 1. The Firefox run; the README then says the download path was checked in Safari (0.15 h).
 2. N1, "Where did you go"; N2 and N3 stay (0.1 h).
 3. The `clues.where` flag. Live PAL just doesn't know about the file, and the scripted save line still lands (0.1 h).
@@ -521,14 +534,15 @@ test/director.test.js  test/haunt.test.js (source scan)  dev.mjs  package.json  
 
 | Risk | Mitigation |
 |---|---|
-| Opus 5.5 latency | `effort low`, parallel calls, the paused clock, masking, a 6 s gate that asks the user (fast mode is the prepared option), and set pieces with no network calls |
+| Model latency | Monday's benchmark picks the cheapest model per agent that keeps its voice; thinking off where allowed, `effort low`, parallel calls, the paused clock, masking, and set pieces with no network calls; Opus fast mode only if the picked pair still misses 6 s |
+| A cheaper model breaks character | The voice checklist and the jailbreak set run before the pick; the Director owns the plot whatever the model writes; `MODEL_PAL` or `MODEL_WREN` goes back to Opus with one env change |
 | Refusals or out-of-character replies | Fiction framing, refusal fallbacks enabled, `[SIGNAL LOST]` lines, the `ooc` pause, a 10-line adversarial pass on Thu Oct 22 |
 | The LLM derails the story | Beats live server-side, deterministic gates, bounces, clamps, scripted contradictions |
 | A judge misses the set piece | Clock gate at 2:51:30, `?demo=1` gates on clues only, backup video |
 | Rate tier or venue IP limits | Check the tier before kickoff; the WAF rule counts only POST, at 60/min; the breaker falls back to scripted mode |
 | Cost abuse | Spend cap, WAF, origin and size checks, clamped output, kill switch, separate dev key |
 | Scope creep | 4 icons, 3 window types, no window dragging, 2 real haunts and no third (no calendar, email or native app), a written cut order, feature freeze Thu Oct 22 6 PM ET |
-| The 96-hour window (about 36 working hours) | 32.35 h planned with 3.65 h of buffer (10.1%), a done-when gate every night, the Thu 12 PM ET agents gate, the §I cut-first list, Thursday's backup captures, submit Fri 12 PM ET with 2 h to spare |
+| The 96-hour window (about 36 working hours) | 32.6 h planned with 3.4 h of buffer (9.4%), a done-when gate every night, the Thu 12 PM ET agents gate, the §I cut-first list, Thursday's backup captures, submit Fri 12 PM ET with 2 h to spare |
 | Built-during-event rule | No code before Mon 2 PM ET; pre-kickoff work is rules, accounts, asset choices, machine prep and, only if the rules allow it, prose and art drafts. PLAN.md already holds code snippets (the §D call, the §N guard and regex), so the rules check asks about them; if they aren't allowed, they become prose before Mon 2 PM ET |
 | Licensing | Halcyon 95 branding (no Microsoft marks), original icons or plain squares, the maroon ABSORBED card (no blue-screen copy), credits, no third-party sounds |
 | Photosensitivity | WCAG 2.3.1, no red flashes, no looping flicker, calm mode defaults from the OS, warning screen, Esc to pause |
@@ -604,7 +618,7 @@ test/director.test.js  test/haunt.test.js (source scan)  dev.mjs  package.json  
   - Flash audit: scrub a 60 fps QuickTime capture of THE POSSESSION, the only scene with fast motion now that both endings fade.
 - **Cost and abuse:**
   - `cache_read > 0`.
-  - $/run is about $0.40.
+  - $/run matches the pick: about $0.10 for Sonnet PAL with Haiku Wren, about $0.40 if Opus is used.
   - Spend limits are set.
   - The 429, 403 (foreign Origin), 413 (9 KB body) and 400 (bad JSON) checks pass.
 
