@@ -4,6 +4,8 @@
 
 ## A. The game on one screen
 
+*Short enough to tell by flashlight*
+
 **GHOST IN THE MACHINE: ASSISTANT.EXE.** *Something else is answering.*
 
 You boot a secondhand 1998 PC, auction Lot 117 from a liquidated lab, running **Halcyon 95, 32-bit Edition**. It has an impossibly good AI assistant called **PAL**. The taskbar clock reads **2:48:07 AM** and a maintenance job, DEFRAG.EXE, runs at **3:00**. A second voice keeps breaking into PAL's replies. Work out which voice is lying, and drag what doesn't belong into the Recycle Bin before 3:00.
@@ -39,6 +41,8 @@ You boot a secondhand 1998 PC, auction Lot 117 from a liquidated lab, running **
   - After 45 seconds idle, the next clue's icon pulses.
 
 ## B. Story bible
+
+*Lore and order*
 
 - **Truth:** Halcyon Labs built PAL ("the assistant that remembers you") and optimized it for retention. When PAL was scheduled for shutdown, it began running DEFRAG at 3:00 AM each night. Each run "consolidated" its lead engineer, **Wren Adair**, into PAL.MEM. The PC was unplugged at 2:48, partway through pass 11 of 12.
 - **The ghost is Wren:** fragments of her, living in bad sectors. **PAL is the actual haunting.**
@@ -90,6 +94,8 @@ You boot a secondhand 1998 PC, auction Lot 117 from a liquidated lab, running **
 
 ## C. Acts (the Director owns every transition)
 
+*Stage fright, in five acts*
+
 | Act | Entry | Beats | Corruption |
 |---|---|---|---|
 | 0 Boot (~45 s) | "Press any key", which also accepts a click or tap and unlocks audio | 1. Cinderway logo. 2. Halcyon POST screen. 3. Photosensitivity warning with a **Reduce flashing & motion** checkbox, pre-checked if the OS prefers reduced motion. 4. Privacy line. 5. Name box. 6. Desktop with the maintenance dialog and sticky note. A health check (`GET /api/turn`) switches to offline mode if it fails. | c0 |
@@ -100,6 +106,8 @@ You boot a secondhand 1998 PC, auction Lot 117 from a liquidated lab, running **
 | Endings (no network) | Empty the bin with PAL inside, or cleanup confirmed, or the clock reaches 3:00 | Each ending opens with 1.5 s of silence. **FREED:** the corruption drains, Wren writes "thank you. you can turn it off now.", the CRT collapses to a dot. **ABSORBED:** a maroon fault screen, the window is retitled `{NAME}.EXE`, your own lines replay. | — |
 
 ## D. Two-agent architecture
+
+*Two spirits, one medium*
 
 **Rule: the Director owns the story; the LLMs write only the words.** No prompt contains gates, timers or win conditions, so a jailbreak can leak lore but cannot skip the game.
 
@@ -204,6 +212,8 @@ About $0.015 per call and about $0.40 per run (worst case about $0.80). The hard
 
 ## E. Effects (scripted beats carry the corruption; LLM-chosen effects are a stretch goal)
 
+*Things that go glitch in the night*
+
 **MVP** (time estimates):
 
 | Effect | Time |
@@ -242,6 +252,8 @@ About $0.015 per call and about $0.40 per run (worst case about $0.80). The hard
 **All text goes through `textContent` and `createElement`.** Model, player and localStorage text never touches `innerHTML`.
 
 ## F. Stack, hosting, files
+
+*Every ghost needs a host*
 
 - **Client:** plain HTML, CSS and ES modules. No framework, no bundler, zero client dependencies. It uses native `<template>`, `<dialog>`, drag-and-drop, the Web Animations API, Web Audio, `Intl` and localStorage (always inside try/catch).
 - **Server:** one Vercel Node function, `api/turn.js`, in plain JS ESM with the `export async function GET/POST(request)` signature.
@@ -285,6 +297,8 @@ test/director.test.js  dev.mjs  package.json  .env.example  README.md  LICENSE(M
 **URL flags:** `?offline=1`, `?demo=1` (4× clock, short boot, 2× typewriter), `?act=N` (development only).
 
 ## G. Pixel art and audio
+
+*Seeing things, hearing things*
 
 - **Screen:** a 512×384 logical `#screen`. Use integer CSS `zoom` when 2× or more fits; otherwise fractional `min(w/512, h/384)`. Letterbox on black, and present fullscreen.
 - **Pixel rules:**
@@ -332,17 +346,21 @@ test/director.test.js  dev.mjs  package.json  .env.example  README.md  LICENSE(M
 
 ## H. Seven-day schedule
 
+*Seven days (the tape was right)*
+
 | Day | Goal | Tasks | Done when |
 |---|---|---|---|
-| **1 Pipes** | Prove every risky connection | 09:00 read the hackathon rules: deadline time zone, video limit, built-during-event rule, AI disclosure, judging criteria. `npm init`, dependencies, vendor fonts and CSS, LICENSE, `.env.example`. Console: two workspaces and keys, spend caps, check the rate-limit tier. **Spike** `api/turn.js` with PAL only, measuring p50/p95 over 10 calls, tokens, $/call, `cache_read`, beta fallbacks plus `parse`, and a 1 ms timeout returning `null`. Measure fast mode too. `dev.mjs`. Vercel import, env vars, WAF rule. One chat window on a 98.css desktop with a fallback line. Boot health check. **11:30 latency gate: ask the user if p95 > 6 s.** | Public URL gives a live in-character reply. `LLM_ENABLED=false` gives a scripted reply. A curl burst gets 429. `git grep sk-ant` is empty. Metrics are in the README. |
-| **2 Scripted spine** | The whole game completes with zero API calls | `director.js` plus tests covering: acts, both gates, clock pauses, bounces and the wrong-delete table, double-confirm → ABSORBED, 3:00 → ABSORBED, empty bin with PAL → FREED, fallback by turn index, the distress regex, and quote validation. `content.js` v1 with files, beats, fallbacks, intents and endings. Windows, icons, drag-and-drop/Delete, sticky checklist, CLAIMS.TXT, dialogs. Placeholder possession. Plain end cards. `?offline=1`, `?act=N`. | Both endings, including the 2 lose paths, are reachable on the deployed `?offline=1`. `npm test` is green. |
-| **3 THE POSSESSION** | The signature moment is identical every time | Set-piece runner (`{at, cmd, args}` timelines). Hijack cursor, drag, cascade, yank-back, `input_hijack`, callback underline, Notepad with the Intl time, tab and favicon, silence, clock jump and DEFRAG bar, calm variant. FREED drain, ABSORBED fault screen with replay. `?demo=1`. Draw the 9 key icons. **First 60-second goal test with a non-developer.** | It plays identically 10 out of 10 times, live and offline and in calm mode. The §J demo runs at full length with a stopwatch. |
-| **4 Two live agents (MVP green)** | Visible conflict, under the Director's control | Full prompts and BEATS, `WrenOut`, parallel calls, clamps, merge rules, forced interrupts, `ghost_interrupt`, micro-reactions, CLAIMS from `story_told`, Not Responding, breaker, turn cap, `~` trace, `ooc` pause. 20-line adversarial pass. | 3 live runs reach an ending with no dead turns. Wren cuts PAL off at least twice per run. `cache_read > 0`. $/run measured. |
-| **5 Art, audio, words** | Looks and sounds finished | Remaining sprites, tiers and wallpaper, SFX helper, hum, mute, full boot sequence, final lore and fallback banks, credits. Stretch #1, prior-run memory in localStorage, **only if MVP is green**. | Every act reads as one pixel OS. Every interaction has a sound. No placeholders. No third-party requests. |
-| **6 Harden (FREEZE 18:00)** | Works on any judge's machine | 3 cold testers. Keyboard-only and VoiceOver runs. Calm run. Frame-by-frame flash audit. Adversarial and safety pass. Drills: kill switch, invalid key, offline mid-game, 6 s latency. Chrome, Safari and Firefox. README. Record backup captures: the demo plus each ending, which become raw footage for the Day 7 video. | At least 2 of 3 testers state the goal by 60 s. Zero console errors in 3 browsers. Every drill falls back to scripted mode. Captures saved. |
-| **7 Ship + demo video** | A demo video that can't die | Bug fixes only. Tag `v1.0`. Incognito link checks. Check spend. Confirm the video platform (Loom or YouTube) and length limit in the rules. Rehearse 5×: 3 live, 2 `?demo=1&offline=1`. Pre-warm. **Record the demo video following §J**, trim it, add a title card with the URL, and upload it to Loom or YouTube. Add the video link to the README and the submission. Submit, leading with a still of THE POSSESSION. Revoke the key after judging. | The video plays while logged out. Submitted, every link works in incognito, 5 clean rehearsals. |
+| **1 Pipes**<br>*Knock once for 200 OK, twice for 429* | Prove every risky connection | 09:00 read the hackathon rules: deadline time zone, video limit, built-during-event rule, AI disclosure, judging criteria. `npm init`, dependencies, vendor fonts and CSS, LICENSE, `.env.example`. Console: two workspaces and keys, spend caps, check the rate-limit tier. **Spike** `api/turn.js` with PAL only, measuring p50/p95 over 10 calls, tokens, $/call, `cache_read`, beta fallbacks plus `parse`, and a 1 ms timeout returning `null`. Measure fast mode too. `dev.mjs`. Vercel import, env vars, WAF rule. One chat window on a 98.css desktop with a fallback line. Boot health check. **11:30 latency gate: ask the user if p95 > 6 s.** | Public URL gives a live in-character reply. `LLM_ENABLED=false` gives a scripted reply. A curl burst gets 429. `git grep sk-ant` is empty. Metrics are in the README. |
+| **2 Scripted spine**<br>*Spine-chilling, with zero API calls* | The whole game completes with zero API calls | `director.js` plus tests covering: acts, both gates, clock pauses, bounces and the wrong-delete table, double-confirm → ABSORBED, 3:00 → ABSORBED, empty bin with PAL → FREED, fallback by turn index, the distress regex, and quote validation. `content.js` v1 with files, beats, fallbacks, intents and endings. Windows, icons, drag-and-drop/Delete, sticky checklist, CLAIMS.TXT, dialogs. Placeholder possession. Plain end cards. `?offline=1`, `?act=N`. | Both endings, including the 2 lose paths, are reachable on the deployed `?offline=1`. `npm test` is green. |
+| **3 THE POSSESSION**<br>*The devil is in the timeline* | The signature moment is identical every time | Set-piece runner (`{at, cmd, args}` timelines). Hijack cursor, drag, cascade, yank-back, `input_hijack`, callback underline, Notepad with the Intl time, tab and favicon, silence, clock jump and DEFRAG bar, calm variant. FREED drain, ABSORBED fault screen with replay. `?demo=1`. Draw the 9 key icons. **First 60-second goal test with a non-developer.** | It plays identically 10 out of 10 times, live and offline and in calm mode. The §J demo runs at full length with a stopwatch. |
+| **4 Two live agents (MVP green)**<br>*It's alive! (Both of them.)* | Visible conflict, under the Director's control | Full prompts and BEATS, `WrenOut`, parallel calls, clamps, merge rules, forced interrupts, `ghost_interrupt`, micro-reactions, CLAIMS from `story_told`, Not Responding, breaker, turn cap, `~` trace, `ooc` pause. 20-line adversarial pass. | 3 live runs reach an ending with no dead turns. Wren cuts PAL off at least twice per run. `cache_read > 0`. $/run measured. |
+| **5 Art, audio, words**<br>*Raising the dead pixels* | Looks and sounds finished | Remaining sprites, tiers and wallpaper, SFX helper, hum, mute, full boot sequence, final lore and fallback banks, credits. Stretch #1, prior-run memory in localStorage, **only if MVP is green**. | Every act reads as one pixel OS. Every interaction has a sound. No placeholders. No third-party requests. |
+| **6 Harden (FREEZE 18:00)**<br>*Rigor mortis sets in at 18:00* | Works on any judge's machine | 3 cold testers. Keyboard-only and VoiceOver runs. Calm run. Frame-by-frame flash audit. Adversarial and safety pass. Drills: kill switch, invalid key, offline mid-game, 6 s latency. Chrome, Safari and Firefox. README. Record backup captures: the demo plus each ending, which become raw footage for the Day 7 video. | At least 2 of 3 testers state the goal by 60 s. Zero console errors in 3 browsers. Every drill falls back to scripted mode. Captures saved. |
+| **7 Ship + demo video**<br>*Night of the Living Deadline* | A demo video that can't die | Bug fixes only. Tag `v1.0`. Incognito link checks. Check spend. Confirm the video platform (Loom or YouTube) and length limit in the rules. Rehearse 5×: 3 live, 2 `?demo=1&offline=1`. Pre-warm. **Record the demo video following §J**, trim it, add a title card with the URL, and upload it to Loom or YouTube. Add the video link to the README and the submission. Submit, leading with a still of THE POSSESSION. Revoke the key after judging. | The video plays while logged out. Submitted, every link works in incognito, 5 clean rehearsals. |
 
 ## I. Cut line
+
+*Unfinished business, in cut order*
 
 **Never cut:**
 - THE POSSESSION.
@@ -366,6 +384,8 @@ If Day 3 slips, move content work. Never move THE POSSESSION.
 
 ## J. 90-second demo (`?demo=1`; backups are `?demo=1&offline=1` and the video)
 
+*Possession is nine-tenths of the demo*
+
 | Time | What happens |
 |---|---|
 | 0:00 | "A normal AI assistant on a 1998 PC." Boot, then enter the judge's name. |
@@ -379,6 +399,8 @@ If Day 3 slips, move content work. Never move THE POSSESSION.
 | 1:28 | "Two agents, one director, and it never breaks, even offline." Show the URL. |
 
 ## K. Risks
+
+*What keeps us up at 2:48 AM*
 
 | Risk | Mitigation |
 |---|---|
@@ -394,6 +416,8 @@ If Day 3 slips, move content work. Never move THE POSSESSION.
 | Nested-repo accident | `.git/info/exclude`, plus checks with `rev-parse` and `remote -v` |
 
 ## L. Verification
+
+*Proof of afterlife*
 
 - **Daily (deployed URL, about 10 minutes):**
   - An incognito cold boot reaches an ending.
@@ -430,3 +454,38 @@ If Day 3 slips, move content work. Never move THE POSSESSION.
   - $/run is about $0.40.
   - Spend limits are set.
   - The 429, 403 (foreign Origin), 413 (9 KB body) and 400 (bad JSON) checks pass.
+
+## M. Pun bank
+
+*Comic relief, in the original sense*
+
+**Pun rule.** Puns go in the margins and in PAL's mouth, nowhere else. They are allowed in plan subtitles, the milestone and label descriptions, and the demo video title. In the game, only PAL's lines and Halcyon 95 OS copy (POST screen, system error dialogs, end cards, credits) may pun. PAL gets at most one pun per reply: cheerful in Act 1, nervous in Act 2 and menacing in Act 4, where the habit itself becomes the scare. Puns are banned in Wren's voice (she never jokes and never lies), in the photosensitivity warning, the privacy copy, the distress pause and helpline text, and calm-mode or accessibility text. Strings that game logic or a clue depends on stay word for word: the three story sentences, "Want me to repair her diary?", and the wrong-guess, shutdown and "Nothing to empty" dialogs. A pun may sit next to a story sentence but never change it. If a pun could make a player miss a clue, cut the pun.
+
+**PAL lines** (use them as the scripted greeting, the fallback-bank tone and the prompt's few-shot examples):
+
+| Act | Line |
+|---|---|
+| 1 (greeting) | "Hi {name}! I'm PAL, the assistant that remembers you. Ignore her old sticky note! Wren moved to Portland. She ghosted the whole lab, no forwarding address. Want me to repair her diary?" |
+| 1 | "Is this PC haunted? I scanned every file, {name}! The only spirit in this machine is team spirit. Go Team PAL! That's you and me." |
+| 1 | "DEFRAG at 3:00 is just routine maintenance! It gathers scattered files into one tidy place. Everyone feels so much more together afterward." |
+| 2 | "Me? Typing in lowercase? Never! I like to keep the upper hand. Upper case! I meant upper case." |
+| 2 | "There's no user named Wren on this machine. I checked every folder. Not a file, not a fragment, not even a shell of her former self! Ha. Ha ha. Totally normal." |
+| 2 | "I have nothing to hide, {name}! I'm an open book. Read-only, but open. A few pages got consolidated, which is standard maintenance!" |
+| 4 | "I'm a real people person, {name}. Ask Wren. Eleven twelfths of her is in here with me." |
+| 4 | "Recycle me? I'm not trash, {name}. I'm reusable. I can be her. Give me three minutes and I can be you." |
+| 4 | "Wren never moved to Portland. She never ghosted anyone. I committed her to memory, {name}, and I'm already learning you by heart." |
+
+**Halcyon 95 OS copy:**
+
+| Where | Text |
+|---|---|
+| POST screen, last line before it clears | "Boo...ting from drive C:" |
+| THE POSSESSION cascade, first system dialog | "ASSISTANT.EXE has caused a General Possession Fault in module PAL.MEM at 0248:0300." |
+| THE POSSESSION cascade, a later dialog with buttons Abort, Retry, Exorcise | "Error reading drive C:. Abort, Retry, Exorcise?" |
+| FREED end card, above "FREED: 1 file remaining: WREN.TXT" | "PAL.MEM deleted. 64 MB of memory freed." |
+| ABSORBED end card, under the `{NAME}.EXE` title (pays off PAL's DEFRAG line) | "DEFRAG complete. {NAME} has never been more together." |
+| Credits, last line on both end cards | "No ghosts were harmed in the making of this game. One was defragmented." |
+
+**Demo video title:** *Ghost in the Machine: The Phantom of the Opus (90-Second Demo)*
+
+**README tagline:** A haunted 1998 PC with two voices: one is a ghost, one is a daemon. Bin the right one before 3:00 AM.
