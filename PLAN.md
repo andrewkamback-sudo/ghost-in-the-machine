@@ -56,7 +56,7 @@ You boot a secondhand 1998 PC, auction Lot 117 from a liquidated lab, running **
 | Lies? | Yes. It tells the stories the Director assigns. | Never. She always matches the files. |
 
 **Wren in code:**
-- The word "pal" in her lines is masked as `▓▓▓` using `/\bpal\b/gi`. Only that word is masked, so she can still say "assistant.exe". The mask is PAL's filter, and it only reaches the chat: in WREN.TXT on the real disk, "pal" is not masked.
+- The word "pal" in her lines is masked as `▓▓▓` as a whole word, any capitalization. Only that word is masked, so she can still say "assistant.exe". The mask is PAL's filter, and it only reaches the chat: in WREN.TXT on the real disk, "pal" is not masked.
 - Her red is `#c00000` on light surfaces and `#ff5555` on black.
 
 **PAL's three contradictory stories.** The first two are scripted, so the contradiction always happens:
@@ -68,7 +68,7 @@ You boot a secondhand 1998 PC, auction Lot 117 from a liquidated lab, running **
 
 | Clue | Evidence | Location | Flag set when |
 |---|---|---|---|
-| C1 WHO | `diary_0412.txt` (repaired): "– Wren Adair, PAL lead engineer" | `C:\WREN` icon, which opens the diary in Notepad. It shows `▓▓` until the player clicks **Repair with PAL**, or answers yes to PAL's "Want me to repair her diary?" (`/^(y(es)?\|sure\|ok\|please\|do it)\b/i`, or "repair"/"fix" together with "diary"). | The repaired diary is opened |
+| C1 WHO | `diary_0412.txt` (repaired): "– Wren Adair, PAL lead engineer" | `C:\WREN` icon, which opens the diary in Notepad. It shows `▓▓` until the player clicks **Repair with PAL**, or answers yes to PAL's "Want me to repair her diary?" (a reply starting with yes, y, sure, ok, please or "do it", or one that says "repair" or "fix" together with "diary"). | The repaired diary is opened |
 | C2 WHERE | WREN.TXT, in Wren's voice: DEFRAG moves her into PAL.MEM every night at 3:00, pass 11 of 12 ran tonight, and "do you believe me? type after the arrow, then save." | Chrome and Edge: `{folder}/Halcyon 95/WREN.TXT` on the real disk. Safari and Firefox: a download the player drags back or loads. Declined or failed: the same text in the in-game Notepad (§N) | A saved, non-empty answer after the last `->` is read **locally** |
 | C3 LIAR | `CLAIMS.TXT` appends every story PAL tells. Once it holds 2 different stories, Wren stamps a lowercase red "liar". | Desktop | It is opened with 2 or more stories |
 
@@ -127,22 +127,13 @@ You boot a secondhand 1998 PC, auction Lot 117 from a liquidated lab, running **
    It then looks up `BEATS[beat]` server-side (the client never sends prompt text) and runs `Promise.allSettled([pal(), wantGhost ? wren() : null])` **in parallel**.
 5. **The model call:**
 
-   ```js
-   // model: process.env.MODEL_PAL ?? 'claude-sonnet-5-5' for PAL, process.env.MODEL_WREN ?? 'claude-haiku-5-5' for Wren
-   const THINKING = {                                   // thinking off where the model allows it, for speed
-     'claude-haiku-5-5':  { thinking: { type: 'disabled' } },
-     'claude-sonnet-5-5': { thinking: { type: 'between_tools' } },
-     'claude-opus-5-5':   {},                           // can't be disabled; low effort keeps it short
-   }
-   client.messages.parse({
-     model,
-     max_tokens: 2048,
-     ...THINKING[model],
-     system: [{ type: 'text', text: WORLD_BIBLE + AGENT_BLOCK, cache_control: { type: 'ephemeral' } }],
-     messages: [{ role: 'user', content: stateText }],
-     output_config: { effort: 'low', format: zodOutputFormat(isPal ? PalOut : WrenOut) },
-   }, { timeout: 8000, maxRetries: 0 })
-   ```
+   Each agent's request uses the SDK's structured-output parse call with:
+   - **Model:** `MODEL_PAL` for PAL (default Sonnet 5.5) and `MODEL_WREN` for Wren (default Haiku 5.5).
+   - **Thinking off where the model allows it, for speed:** Haiku "disabled", Sonnet "between_tools", Opus left unset (it can't be disabled; low effort keeps it short).
+   - **Effort** low, **max tokens** 2048, an **8 s timeout** and **no retries**.
+   - **System:** one text block, WORLD_BIBLE then the agent's block, marked for prompt caching.
+   - **User message:** the per-turn state text.
+   - **Output format:** the agent's schema (below).
 
    Assistant prefill returns 400 on all three models, so the request never uses it. A result is accepted only when `stop_reason === 'end_turn'` and `parsed_output` is present. Otherwise that agent returns `null` and gets a fallback line.
 6. **Refusal fallback.** Server-side refusal fallbacks are **enabled by default for Opus and Sonnet**: `client.beta.messages.parse` with `betas: ['server-side-fallback-2026-07-01']` and `fallbacks: 'default'`. Haiku has no server-side fallback, so a Haiku refusal is `null` and gets a scripted line. The Mon Oct 19 spike, timeboxed to 15 minutes, confirms each model accepts `fallbacks` with its thinking setting; any combination that returns 400 drops `fallbacks` for that model and treats a refusal as `null`.
@@ -153,12 +144,16 @@ You boot a secondhand 1998 PC, auction Lot 117 from a liquidated lab, running **
 
 Output schemas carry no length limits, so trimming happens after parsing.
 
-```ts
-PalOut  = { say: string /*clamp 320*/, ooc: boolean }
-WrenOut = { say: string /*clamp 160, lowercase, \bpal\b→▓▓▓*/, ooc: boolean }
-TurnRequest = { beat: 'a1'|'a2' /*Act 4 is scripted*/,
-                msg: max 280, name: /^[\p{L}\p{N} _'.-]{1,16}$/u, clock, clues{who,liar,where /*answered or not, never the text*/}, wantGhost, history: max 14 × 400 }
-```
+- **PAL's output:** `say` (text, trimmed to 320 characters after parsing) and `ooc` (yes or no).
+- **Wren's output:** `say` (text, trimmed to 160 characters, lowercased, and "pal" masked after parsing) and `ooc` (yes or no).
+- **Turn request** (browser to server):
+  - beat: a1 or a2 (Act 4 is scripted);
+  - the player's message, at most 280 characters;
+  - the name: letters in any language, digits, spaces, apostrophes, periods, hyphens and underscores, 1 to 16 characters;
+  - the in-game clock;
+  - clues who, liar and where, each yes or no (where says whether WREN.TXT was answered, never what it says);
+  - whether Wren should answer;
+  - recent history, at most 14 lines of 400 characters each.
 
 Only typed chat turns in Acts 1 and 2 call the API. Act 4 turns, file events (in-game and on the real disk), THE POSSESSION and the plea are scripted, with no network. `clues.where` goes in the per-turn state text, so the cached system block stays byte-stable; it lets live PAL fish for an answer it cannot read.
 
@@ -795,7 +790,7 @@ These three facts corrected the first brief.
 - **Sent only after this run's click:** `notify()` sends only when the player clicked **Allow notifications** in this page load (an in-memory `notifyOptIn` flag) and `Notification.permission` is `granted`. Permission is still read on every send, so a late Allow from Edge's bell works. If permission is already granted at boot, the button still reads "off" until clicked, and the click then just sets the flag, with no prompt. `new Notification()` is wrapped in try/catch.
 - **Never during a pause:** `notify()` does nothing while the game is paused (Esc or distress; the clock's focus pause doesn't count). A distress match cancels the N1 timer and turns notifications off for the rest of the run.
 - **One on screen at a time:** `notify()` closes the previous notification, then sends the next. There is no `tag`, because replacing a tagged notification is silent unless `renotify` is set, and N2 has to alert.
-- **Click:** `n.onclick = () => { window.focus(); n.close() }` brings the player back. Chrome doesn't reliably focus the page on its own.
+- **Click:** clicking a notification focuses the game window and closes the notification, which brings the player back. Chrome doesn't reliably focus the page on its own.
 - **Nothing after the tab closes:** there is no service worker and no push subscription.
 
 | # | When | Title | Text |
@@ -847,7 +842,7 @@ do you believe me? type after the arrow, then save.
 
 Write 2 is Wren's reply, appended below everything the player wrote, after a `====` line (as write 3 is), so the parser stops before it. The player's text stays.
 - Default: `i heard you. it didn't. when it cracks, bin it and empty it. it will beg. don't answer.`
-- If the answer matches `/^(no|nope|nah|n)\b/i`: `fair. don't trust either of us. trust the files. claims.txt keeps its stories.`
+- If the answer starts with the word no, nope, nah or n: `fair. don't trust either of us. trust the files. claims.txt keeps its stories.`
 
 Write 3, the FREED epilogue, is appended after a `====` line and stays on the disk:
 ```
@@ -904,7 +899,7 @@ The copy promises what the code does, not what the browser enforces. Chrome's gr
 
   The game only appends: it never truncates the file or removes a line, the player's lines included. It makes at most 3 writes per run (create, reply, epilogue), 2 KB or less each.
 - **Reads** cover only that file, 16 KB or less. A dropped or loaded file is read only if all of these hold, and otherwise gets "That's not her file.":
-  - its name matches `/^wren.*\.txt$/i`;
+  - its name starts with "wren" and ends in ".txt", in any capitalization;
   - it is 16 KB or less;
   - its first line is the header.
 - **Before every write**, the guard below runs. A `null` or any error stops all writes for the rest of the run. The player goes to the Notepad copy, with a plain line saying why:
@@ -913,46 +908,25 @@ The copy promises what the code does, not what the browser enforces. Chrome's gr
   - the game's own file past 16 KB (`RangeError`): "WREN.TXT has grown past 16 KB, so it was left alone. Delete it to start fresh."
   - the file or folder gone mid-run (`NotFoundError` after write 1): Wren's "you moved my file" line, above.
 
-```js
-let madeDir = false, madeFile = false;   // module level: they survive Boot again; reset when a new folder is picked
-async function wrenHandle(create) {                            // create is true only for write 1
-  let dir;
-  try { dir = await root.getDirectoryHandle('Halcyon 95') }
-  catch (e) {
-    if (e.name !== 'NotFoundError' || !create) throw e;
-    dir = await root.getDirectoryHandle('Halcyon 95', { create: true }); madeDir = true;
-  }
-  try {
-    const h = await dir.getFileHandle('WREN.TXT');               // already there?
-    const f = await h.getFile();
-    const head = (await f.slice(0, 200).text()).replace(/^\uFEFF/, '').split(/\r?\n/)[0].trimEnd();
-    if (head !== HEADER) return null;                            // not ours: never touch it
-    if (f.size > 16384) throw new RangeError('WREN.TXT over 16 KB'); // ours, but too big: leave it
-    madeFile = true; return h;                                   // ours, from this run or an earlier one
-  } catch (e) {
-    if (e.name !== 'NotFoundError' || !create || !madeDir) throw e; // only create inside a folder this page made
-    madeFile = true;
-    return dir.getFileHandle('WREN.TXT', { create: true });      // new, ours
-  }
-}
-async function append(h, text) {                               // never truncates
-  const w = await h.createWritable({ keepExistingData: true });
-  try {
-    const size = (await h.getFile()).size;                       // read after createWritable, so a save made before the write isn't overwritten; one landing during these few ms can be
-    await w.write({ type: 'write', position: size, data: text });
-    await w.close();
-  } catch (e) { try { await w.abort() } catch {} throw e }       // abort can fail too; keep the real error
-}
-```
+**The guard, as rules** (it runs before every write; write 1 is the only one allowed to create anything):
+1. Look for a `Halcyon 95` folder inside the chosen folder. If there is none, only write 1 may create it, and the game remembers that it made the folder. That memory survives **Boot again** and resets when a new folder is picked.
+2. Look for `WREN.TXT` in that folder.
+   - If it exists, read its first 200 bytes (ignoring a byte-order mark). If the first line isn't the game's header, it isn't ours: stop and never touch it. If it is ours but over 16 KB, stop and leave it. Otherwise use it.
+   - If it doesn't exist, create it only on write 1 **and** only inside a folder this page made. Anything else stops all writes.
+
+**Appending, as rules:**
+- Open the file for writing in keep-existing-data mode, so nothing already in it is cleared.
+- Read the file's size **after** opening it, then write at that position. A save made before the write is never overwritten; only one landing in those few milliseconds could be.
+- On any error, abort the write (ignoring a failure of the abort itself) and report the original error.
 
 Chrome writes to a temporary `WREN.TXT.crswap` file and swaps it in on `close()`. `abort()` deletes only that temporary file. If the tab dies mid-write, the `.crswap` file can stay behind; the manifest's removal step covers it.
 
 **Code rules:**
 - `haunt.js` is the only file that touches the real machine: notifications, the folder, the download and the drop.
 - `test/haunt.test.js` reads the source as text and enforces that:
-  - It fails if `haunt.js` matches `/\.(removeEntry|remove|move|entries|values|keys|truncate)\s*\(|type:\s*['"]truncate|showSaveFilePicker|indexedDB|localStorage|sessionStorage|serviceWorker|caches\b|document\.cookie|navigator\.storage/`. It matches calls, not substrings, so `removeEventListener` doesn't trip it. It is strict on purpose: a `classList.remove()` belongs in `game.js`.
+  - It fails if `haunt.js` calls any delete, move, listing or truncate method (`removeEntry`, `remove`, `move`, `entries`, `values`, `keys`, `truncate`, or a truncate write), uses the save-file picker, or touches IndexedDB, localStorage, sessionStorage, a service worker, Cache Storage, cookies or `navigator.storage`. It matches method calls, not substrings, so `removeEventListener` doesn't trip it. It is strict on purpose: a `classList.remove()` belongs in `game.js`.
   - It fails unless every `createWritable(` in `haunt.js` is `createWritable({ keepExistingData: true })`, because a bare one replaces the whole file on `close()`.
-  - It fails if any other `public/*.js` matches `/showDirectoryPicker|getFileHandle|getDirectoryHandle|createWritable|\bNotification\b/`.
+  - It fails if any other file in `public/` uses the folder picker, file or folder handles, writable streams or the Notification API.
 - The download anchor is never added to the DOM, so no `.remove()`; only `URL.revokeObjectURL`.
 - `node --test` is the Vercel Build Command, so a failing scan blocks the deploy, not just a local `npm test`.
 - Handles live in memory only; Chrome ends folder access when every tab of this game is closed.
