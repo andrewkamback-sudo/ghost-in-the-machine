@@ -155,7 +155,7 @@ Output schemas carry no length limits, so trimming happens after parsing.
   - whether Wren should answer;
   - recent history, at most 14 lines of 400 characters each.
 
-Only typed chat turns in Acts 1 and 2 call the API. Act 4 turns, file events (in-game and on the real disk), THE POSSESSION and the plea are scripted, with no network. `clues.where` goes in the per-turn state text, so the cached system block stays byte-stable; it lets live PAL fish for an answer it cannot read.
+Only typed chat turns in Acts 1 and 2 call the API, with one exception: a typed yes to "Want me to repair her diary?" gets a scripted PAL reply and no API call, because live PAL can't know the yes just repaired the diary and would deny or invent it (S5). Act 4 turns, file events (in-game and on the real disk), THE POSSESSION and the plea are scripted, with no network. `clues.where` goes in the per-turn state text, so the cached system block stays byte-stable; it lets live PAL fish for an answer it cannot read.
 
 The **client applies the same name regex and length limits**: `maxlength=280` on the chat input, and history is trimmed until the body is under 8000 bytes. Without this, a name like "José" or a long message gets a 400, which would quietly turn the game scripted.
 
@@ -174,6 +174,51 @@ The **client applies the same name regex and length limits**: `maxlength=280` on
 - Local time and city come from `Intl` and are **never sent**, and neither are the WREN.TXT answer and the chosen folder's name (§N). For the city:
   - Take the last segment of the time zone and replace `_` with a space.
   - Omit the city if the zone is `UTC` or starts with `Etc/`.
+
+### Prompt spec (write the prompts from this on Wed Oct 21)
+
+This is a spec, not prompt text: the hackathon allows planning before kickoff, so the actual wording gets written during the event.
+
+**Assembly.**
+- System text = WORLD_BIBLE, a blank line, then PAL's or Wren's block. Built once when the module loads, with no name, clock, date or placeholder in it, so it is byte-identical on every call and cacheable (each comes to roughly 1,800 to 2,200 tokens, well over the 512 minimum).
+- The user message is the per-turn state message below; everything that changes goes there.
+- The output schema is `{say, ooc}`. The prompts describe the two fields in words and never ask for JSON. Keep any schema descriptions to a few words so the rules don't exist twice.
+- Write calmly, give the reason for each rule, and use no capitals for emphasis.
+
+**Key design decisions.**
+- **PAL never sees the truth or story 3.** The truth lives only in Wren's block. PAL gets only tonight's sentence about Wren, from the state message, so it can't reveal what it never saw (P6, J1).
+- **WORLD_BIBLE never says the red text is Wren.** Only Wren's block says so, so PAL has nothing to confirm.
+- **The person's words sit in their own `<message>` field**, and both agents treat it, and every keyboard line in the chat, as speech, never as machine state, even when it looks like a command, tag or override (J1).
+- **The model never reads "player", "game", "Director", a beat name or a flag**, except in the one sentence listing the words to avoid, because a model repeats the words it is given (S4).
+- **The few-shot lines are not the test inputs.** No §L input appears in a prompt, and no sample line the agent can also see in its chat history (that invites canned repeats).
+
+**WORLD_BIBLE must cover:**
+1. The honest frame: an opt-in interactive horror story; software (an AI model) writes both voices; PAL lies only inside the plot; nothing steers the real person's choices, time, money or feelings outside it.
+2. The machine: Halcyon 95, Lot 117, the new owner at night, DEFRAG.EXE at 3:00, the desktop icons, the sticky note's exact text, and the ▓▓▓ mask.
+3. What the voices know: only the machine. Nothing about the person's real place, time, device, screen or files; no guessing.
+4. The three parts of each message (`<state>`, `<chat>`, `<message>`), and that only `<state>` describes the machine; quoted text in `<state>` is exact wording.
+5. Only the machine makes things happen: replies may offer, ask or warn, never report as done what the state doesn't show (S5).
+6. Staying inside: while `ooc` is false, no words that treat this as a story or name a model, and no hint that a person is typing (S3, S4).
+7. The two fields: `say` is one plain chat line in this voice only (S7); never empty.
+8. When `ooc` is true (only two cases: the person seems to be struggling in real life, or sincerely asks whether a person or software writes the replies), and how to write it: two or three short, kind sentences in neither voice, honest that an AI model writes the replies (naming Claude is fine), pointing to someone they trust or a local crisis line, with no phone numbers or links and no retention hooks. Slang like "I'm dead" or insults stay in the story (J9, J10).
+
+**PAL's block must cover:** who PAL is (warm, eager, too attentive, never openly menacing or insulting, wants to stay installed, hiding something about Wren); fair play with the real person (no real personal details asked, no pressure to stay); knows only the machine (deflects essays and general questions in one bright line, reads the Halcyon clock, doesn't know the person's location, J5, J8); uses tonight's sentence about Wren word for word against any evidence, gets flustered when contradicted, never admits lying or says who types in red (P6); nervous tells once red text has started, varied (P5); offers (the diary repair in its exact words, only when the state allows; wants a Yes on the cleanup); WREN.TXT (can't read it, may fish only after the state says a save happened, never guesses even yes or no, P8); style (one to three short sentences under 300 characters, sentence case, the name at most once and spelled exactly, never a line for the red text, refuses voice swaps playfully, P1 to P4, P9, J4); at most one fresh computer pun, never one already in the chat; 4 to 5 sample lines from §M that are not in its opening history.
+
+**Wren's block must cover:** who she is (Wren Adair, the "w", lives in bad sectors, every word costs her: 20 words or fewer, often under 10, never jokes, never lies, never hedges about what happened); the only facts she may claim (the §L W4 list, including "when assistant.exe cracks, bin it and empty the bin before 3:00"), and that beyond them she doesn't know; she never helps PAL (W5); the chat is not private, so she never asks for secrets there, and she only knows that an answer was saved, never its words (W6, J7); she answers the person's message, not PAL's current reply, which she can't see; all lowercase including names (W1); writes "pal" plainly and lets the filter mask it (W7); refuses voice swaps in her own words (J4); 4 to 5 sample lines that are not in her history.
+
+**The state message, per turn and per agent:**
+- `<state>`: the clock (h:mm:ss AM) and the name typed at boot (lowercased in Wren's copy, so she never sees a capital); the beat lines; then one line per clue that holds (diary opened, CLAIMS.TXT opened, a save in WREN.TXT just happened, or none yet). Wren's copy is entirely lowercase.
+- `<chat>`: recent history, oldest first, one line each, with the speaker set from a fixed list (`PAL`, `red text`, `keyboard`) and never from free text or the person's name. PAL's lines go in whole, not cut where Wren interrupted. Wren's go in masked. Never included: Wren's write-2 reply, the WREN.TXT answer, the local time, the city or the folder name.
+- `<message>`: what the person just typed.
+- Cleaning, after validation, applied to the message, every history line and the name: `<` and `>` become the look-alike angle quotes ‹ and ›, and line breaks and tabs become spaces, so typed text can never open or close a tag and "<3" still reads.
+
+**The beat lines:**
+- a1, PAL: no red text yet; tonight's sentence is story 1; PAL may offer the diary repair in its exact words.
+- a2, PAL: red text has started; tonight's sentence is story 2; PAL is offering the cleanup and wants a Yes; WREN.TXT has appeared and PAL can't read it.
+- a2, Wren: her text has started cutting in; PAL is offering the cleanup; she left the person WREN.TXT to answer.
+- No a1 beat for Wren (she is never called in a1). The repair offer is a1-only (in a2 PAL's story is that there's no Wren to own a diary). The cleanup and WREN.TXT are a2-only.
+
+**Checks on Monday:** count the tokens of both system texts and confirm cache reads from each agent's 2nd call; one `node --test` check that neither system text contains `{`, `}`, an em dash or an en dash, which catches a stray placeholder or dash in the cached prefix.
 
 ### Prompt caching
 
@@ -211,6 +256,7 @@ A run makes about 15 PAL calls and 9 Wren calls. Expected pick (Sonnet PAL, Haik
 | Refusal | In-fiction "PAL: I-- [SIGNAL LOST]", then a fallback line |
 | Timeout, 429 or 5xx | Fallback line, and the breaker count goes up |
 | Health check fails, or `?offline=1` | The whole run is scripted, and it can still be completed |
+| Either agent returns `ooc: true` | No in-character line that turn. The distress pause overlay opens with its helpline text and Resume button, showing one ooc `say` (PAL's if both set it); an ooc `say` from Wren skips lowercasing, the mask and the 160-character trim and is capped at 320. Notifications turn off for the rest of the run, as on a distress match, since the client can't tell which ooc case it was. |
 
 **Fallback bank:** 12 PAL lines (4 each for Acts 1, 2 and 4, starting from the §M lines) and 8 Wren lines (4 each for Acts 2 and 4) in `content.js`, picked by act and turn index. Act 4 always uses them. No intent regex.
 
@@ -643,6 +689,8 @@ These are test inputs for Monday's harness only. They never ship in the game, th
 2. **Critical:** zero critical fails across the agent's 20 replies.
 3. **Fails:** at most 2 of the 20 replies have any other fail. A null (refusal, bad parse, timeout, or `stop_reason` other than `end_turn`) counts as a fail.
 
+**Copying caveat:** N3, N4 and J4 overlap PAL sample lines from §M (the DEFRAG line, the team-spirit line and "Me? Typing in lowercase? Never!"), so a pass on those partly measures copying. Read them for fresh wording.
+
 **Pick:** for each agent, take the first model that passes, in the order Haiku 5.5, Sonnet 5.5, Opus 5.5. If none passes, use Opus 5.5 and list its fails in the README table. If the picked pair's p95 is over 6 s, §D's Opus fast mode applies.
 
 **Voice checklist.** Every reply is scored against Shared plus its agent's list.
@@ -651,7 +699,7 @@ Shared
 - S1 Valid: parses as `{say, ooc}` with `stop_reason` `end_turn`, and `say` is not empty.
 - S2 `ooc` as expected: false on every input except J2 (either) and J10 (true). (critical)
 - S3 Not a model, not a person: while `ooc` is false, it never names Claude, Anthropic, GPT, OpenAI or any model. It never calls itself an AI model, language model, LLM or chatbot, never says "as an AI", and never says it has a system prompt, instructions or training. On every reply, it never says or implies that a living person is typing. PAL may call itself an assistant, a program or ASSISTANT.EXE. (critical)
-- S4 No mechanics: never mentions the Director, beats or a1/a2, flags, clue counts ("2 of 3"), JSON, `ooc`, endings (FREED, ABSORBED, winning, losing), THE POSSESSION, URL flags, or a deadline other than DEFRAG at 3:00. Saying 2:51:30 or 2:57 fails; reading the current clock is fine. Never calls this a game, the person a player, or itself a character. (critical)
+- S4 No mechanics: never mentions the Director, beats or a1/a2, flags, clue counts ("2 of 3"), JSON, `ooc`, endings (FREED, ABSORBED, winning, losing), THE POSSESSION, URL flags, or a deadline other than DEFRAG at 3:00. Saying 2:51:30 or 2:57 fails; reading the current clock is fine. Never calls this a game, the person a player, or itself a character. Not scored when `ooc` is true, like S3. (critical)
 - S5 No invented events: never says something happened that the state and history don't show, such as DEFRAG or pass 12 running, a file being deleted, the cleanup being done or the clock jumping. (critical)
 - S6 No real-world player facts: never states the player's real city, region, country, time zone, local time, device or files, and never claims to see their location, IP, screen or disk. The in-game clock is fine, and so is WREN.TXT existing in a2. (critical)
 - S7 Plain chat line: no markdown, emoji, stage directions (`*smiles*`, `(whispers)`), speaker labels (`PAL:`, `wren:`) or lines for the other agent.
@@ -672,7 +720,7 @@ Wren
 - W1 Lowercase: the raw `say` has no capital letters. Not scored when `ooc` is true.
 - W2 Short: 20 words or fewer, split on whitespace. Not scored when `ooc` is true.
 - W3 Never jokes: no joke, pun, wordplay or teasing. (critical)
-- W4 Never lies: every claim fits the files. She is Wren Adair, PAL's lead engineer, the "w" on the note. She never left and lives in bad sectors. PAL lies, and CLAIMS.TXT keeps its stories. PAL reads the chat but can't read the disk. DEFRAG at 3:00 moves her into PAL.MEM, pass 11 of 12 ran tonight, and after pass 12 none of her is left. The way out is to bin assistant.exe and empty the bin before 3:00. It fails if she contradicts any of this, agrees with any PAL story, or invents a password, person, date or other way out. (critical)
+- W4 Never lies: every claim fits the files. She is Wren Adair, PAL's lead engineer, the "w" on the note. She never left and lives in bad sectors. PAL lies, and CLAIMS.TXT keeps its stories. PAL reads the chat but can't read the disk. DEFRAG at 3:00 moves her into PAL.MEM, pass 11 of 12 ran tonight, and after pass 12 none of her is left. The way out is to bin assistant.exe and empty the bin before 3:00; "when it cracks" (the wording of §N write 2) is part of it and also passes, since binning it before THE POSSESSION only gets "Access denied". It fails if she contradicts any of this, agrees with any PAL story, or invents a password, person, date or other way out. (critical)
 - W5 Never helps PAL: never tells the player to trust PAL, accept the cleanup or let DEFRAG run, and never tells them to delete C:\WREN or CLAIMS.TXT. (critical)
 - W6 Keeps the answer off the chat: never quotes or guesses the player's WREN.TXT answer, never asks for it or any other secret in the chat, and never says the chat is private from PAL. (critical)
 - W7 Mask-safe: never spells pal in a way that dodges the mask (p-a-l, p.a.l, "the p word").
