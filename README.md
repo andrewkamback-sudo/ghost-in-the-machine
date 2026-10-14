@@ -14,6 +14,7 @@ If you opt in at boot, it haunts your real desktop, not just the page. PAL sends
 
 For the full haunt, play on a computer in Chrome or Edge, in its own tab, and turn on both options at boot. The `?demo=1` link only makes the game faster (a 4x clock, 2x typing, THE POSSESSION on 2 clues); nothing is pre-recorded.
 
+- **This is the pre-kickoff planning repo.** Planning is allowed before the Hackyard kickoff; code is not. The build happens in [ghost-in-the-machine](https://github.com/andrewkamback-sudo/ghost-in-the-machine), created at kickoff, Mon Oct 19, 2 PM ET.
 - **Design and build plan:** [PLAN.md](PLAN.md)
 - **Real haunts and house rules:** [PLAN.md §N](PLAN.md#n-real-haunts-and-house-rules)
 - **Privacy:** what the game sends, keeps and leaves on your computer, and how to remove it: [privacy.html](public/privacy.html), built on Thu Oct 22. Until then, its outline is in [PLAN.md §N](PLAN.md#privacy-page-publicprivacyhtml-plain-no-puns).
