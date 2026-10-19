@@ -69,7 +69,11 @@ const disk = {
 };
 
 export async function pickFolder() {
-  const root = await window.showDirectoryPicker({ id: 'halcyon95', mode: 'readwrite', startIn: 'desktop' });
+  return useFolder(await window.showDirectoryPicker({ id: 'halcyon95', mode: 'readwrite', startIn: 'desktop' }));
+}
+
+// Takes any directory handle; the e2e tests pass one from the browser's private file system.
+export function useFolder(root) {
   disk.root = root;
   disk.folderName = root.name;
   disk.madeDir = false;
