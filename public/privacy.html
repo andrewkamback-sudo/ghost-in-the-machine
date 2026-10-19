@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy: Ghost in the Machine</title>
+  <link rel="stylesheet" href="vendor/98.css">
+  <style>
+    body { background: #008080; margin: 0; padding: 24px 12px; font-size: 13px; line-height: 1.5; }
+    .window { max-width: 680px; margin: 0 auto; }
+    .window-body { font-size: 13px; }
+    h1 { font-size: 20px; margin: 4px 0 12px; }
+    h2 { font-size: 14px; margin: 16px 0 4px; }
+    p { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="window">
+    <div class="title-bar"><div class="title-bar-text">Privacy</div></div>
+    <div class="window-body">
+      <h1>Ghost in the Machine: privacy</h1>
+      <p>This page describes only what the game actually does.</p>
+
+      <h2>Sent to Anthropic's API</h2>
+      <p>Your name and what you type in the chat (with the recent chat history), plus the game's own state: the clock, and which clues are found, as yes or no. The game's server passes them to Anthropic's API to generate replies and keeps no copy. Anthropic's side is covered by <a href="https://www.anthropic.com/legal/privacy" rel="noopener">Anthropic's privacy policy</a>.</p>
+      <p>Your local time, your city, the folder's name, what you type into WREN.TXT, and Wren's replies to it, are never sent.</p>
+
+      <h2>Hosting</h2>
+      <p>The game is served by Vercel, which sees your IP address to deliver the page and apply the rate limit. Vercel's side is covered by <a href="https://vercel.com/legal/privacy-policy" rel="noopener">Vercel's privacy policy</a>.</p>
+
+      <h2>Kept in your browser</h2>
+      <p>Nothing. No cookies, localStorage, IndexedDB or service worker. The browser itself remembers a notification permission you gave until you reset it.</p>
+
+      <h2>The real folder and file (Chrome and Edge)</h2>
+      <p>One new folder, Halcyon 95, inside the folder you pick, holding one file, WREN.TXT. To remove it, drag the Halcyon 95 folder to the Trash (the Recycle Bin on Windows); a WREN.TXT.crswap file there is from an interrupted save and goes with the folder. Folder access ends when every tab of the game is closed. If the folder syncs (iCloud Drive, OneDrive, Dropbox, Google Drive), WREN.TXT syncs with it, so pick a folder only you use.</p>
+      <p><b>Safari and Firefox:</b> WREN.TXT in your Downloads folder, perhaps with a number added; delete it like any download.</p>
+
+      <h2>Notifications</h2>
+      <p>Short in-story lines from the game, at most 3 a run, each also shown in the game. They come only after you click <b>Allow notifications</b> in that visit, and only while you're in another window. To switch them off: the site controls next to the address bar, then Notifications, then Block or Reset.</p>
+
+      <h2>What you type into WREN.TXT</h2>
+      <p>The game reads it only inside its own tab, and it never leaves that tab: not to Anthropic, not to any server.</p>
+
+      <h2>Nothing deleted</h2>
+      <p>The game only adds to its own file. The Recycle Bin in the game is fictional.</p>
+
+      <p><a href="/">Back to the game</a> · The <a href="https://github.com/andrewkamback-sudo/ghost-in-the-machine" rel="noopener">source is public</a>.</p>
+    </div>
+  </div>
+</body>
+</html>
