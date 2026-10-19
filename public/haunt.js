@@ -230,6 +230,119 @@ export async function readHerFile(file) {
   return { ok: true, answer: parseAnswer(await file.text()) };
 }
 
+// ---------- Her 3:00 AM reminder (a calendar file the player chooses to open) ----------
+
+const icsText = (t) => t.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+// RFC 5545: lines longer than 75 octets continue on the next line after one space.
+function fold(line) {
+  const out = [];
+  let rest = line;
+  while (new TextEncoder().encode(rest).length > 75) {
+    let cut = 74;
+    while (new TextEncoder().encode(rest.slice(0, cut)).length > 74) cut--;
+    out.push(rest.slice(0, cut));
+    rest = ' ' + rest.slice(cut);
+  }
+  out.push(rest);
+  return out.join('\r\n');
+}
+
+export function nextThreeAM(now = new Date()) {
+  const d = new Date(now);
+  d.setHours(3, 0, 0, 0);
+  if (d <= now) d.setDate(d.getDate() + 1);
+  return d;
+}
+
+export function buildIcs({ summary, description }, now = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const at = nextThreeAM(now);
+  const local = `${at.getFullYear()}${pad(at.getMonth() + 1)}${pad(at.getDate())}T030000`; // floating: 3:00 AM local
+  const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+  const lines = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Cinderway Interactive//Ghost in the Machine//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${stamp}-pass12@ghost-in-the-machine`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART:${local}`,
+    'DURATION:PT1M',
+    `SUMMARY:${icsText(summary)}`,
+    `DESCRIPTION:${icsText(description)}`,
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:PT0M', `DESCRIPTION:${icsText(summary)}`, 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR',
+  ];
+  return lines.map(fold).join('\r\n') + '\r\n';
+}
+
+let icsSaved = false;
+export function saveIcs(event) {
+  const url = URL.createObjectURL(new Blob([buildIcs(event)], { type: 'text/calendar' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'wren-3am.ics';
+  a.click(); // never added to the DOM
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  icsSaved = true;
+}
+
+// ---------- Wren's own window (opt-in at boot, opened by a click) ----------
+
+let wrenWin = null;
+
+// Call from a click. Returns false if the browser blocked it.
+export function openWrenWindow() {
+  const w = 320, h = 220;
+  const left = (screen.availLeft ?? 0) + screen.availWidth - w - 40;
+  const top = (screen.availTop ?? 0) + 60;
+  wrenWin = window.open('wren.html', 'wren', `popup,width=${w},height=${h},left=${left},top=${top}`);
+  return !!wrenWin;
+}
+
+const wrenOpen = () => wrenWin && !wrenWin.closed;
+export const hasWrenWindow = () => !!wrenOpen();
+
+async function wrenDoc() {
+  if (!wrenOpen()) return null;
+  for (let i = 0; i < 40 && wrenWin.document.readyState !== 'complete'; i++) await new Promise((r) => setTimeout(r, 50));
+  return wrenWin.document.getElementById('lines') ? wrenWin.document : null;
+}
+
+// Text reaches her window only through textContent.
+export async function wrenWindowSay(text, { pal = false } = {}) {
+  const doc = await wrenDoc();
+  if (!doc) return;
+  const p = doc.createElement('p');
+  if (pal) p.className = 'pal';
+  p.textContent = text;
+  doc.getElementById('lines').append(p);
+  doc.scrollingElement.scrollTop = doc.scrollingElement.scrollHeight;
+}
+
+export function wrenWindowTitle(t) { if (wrenOpen()) wrenWin.document.title = t; }
+
+// THE POSSESSION: her window shudders and crawls toward the game, then is pulled back.
+export async function wrenWindowDrift({ calm = false } = {}) {
+  if (!wrenOpen()) return;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const from = { x: wrenWin.screenX, y: wrenWin.screenY };
+  const to = { x: window.screenX + window.outerWidth / 2 - 160, y: window.screenY + window.outerHeight / 2 - 110 };
+  const steps = calm ? 3 : 24;
+  try {
+    for (let i = 1; i <= steps; i++) {
+      const jitter = calm ? 0 : (i % 2 ? 6 : -6);
+      wrenWin.moveTo(Math.round(from.x + ((to.x - from.x) * i) / steps + jitter), Math.round(from.y + ((to.y - from.y) * i) / steps));
+      await sleep(calm ? 400 : 60);
+    }
+    await sleep(700);
+    wrenWin.moveTo(from.x, from.y);
+  } catch {}
+}
+
+export function closeWrenWindow(afterMs = 0) {
+  if (!wrenOpen()) return;
+  setTimeout(() => { try { wrenWin.close(); } catch {} }, afterMs);
+}
+
 // ---------- The end-card manifest ----------
 
 export function manifest({ fileMode, notifications }) {
@@ -251,6 +364,11 @@ export function manifest({ fileMode, notifications }) {
     items.push('WREN.TXT in your Downloads folder. Your browser may have added a number to the name.');
     remove.push('Delete WREN.TXT from your Downloads folder.');
   }
+  if (icsSaved) {
+    items.push('One calendar file, wren-3am.ics, in your Downloads, and her 3:00 AM event if you opened it.');
+    remove.push('Delete the 3:00 AM event from your calendar, and wren-3am.ics from your Downloads.');
+  }
+  if (wrenWin) items.push('A small window called wren, which closes itself.');
   if (notifications) items.push(`${sent} notification${sent === 1 ? '' : 's'} from this site.`);
   if (!items.length) items.push('Nothing. Both options were off.');
   return { items, remove };

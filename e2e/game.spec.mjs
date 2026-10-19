@@ -44,5 +44,8 @@ test('boot to FREED offline, by keyboard', async ({ page }) => {
   await expect(page.locator('#end')).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('#end-title')).toHaveText('FREED');
   await expect(page.locator('#end-manifest')).toContainText('Emptying it deleted nothing on your computer');
+  const [ics] = await Promise.all([page.waitForEvent('download'), page.locator('#end-cal').click()]);
+  expect(ics.suggestedFilename()).toBe('wren-3am.ics');
+  await expect(page.locator('#end-manifest')).toContainText('her 3:00 AM event');
   expect(errors).toEqual([]);
 });

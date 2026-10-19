@@ -186,6 +186,24 @@ export const WREN_FILE = {
   ],
 };
 
+// Wren's own real window (opt-in at boot, opened by a click in Act 2).
+export const WREN_WINDOW = {
+  ask: "i can't stay in its window. give me my own.",
+  button: 'Open her window',
+  blocked: 'Her window was blocked by your browser. Play on; she stays in the chat.',
+  freed: 'thank you. you can turn it off now.',
+  absorbed: "Hi {name}! She's gone. This window is mine now.",
+};
+
+// One calendar file the player may choose to save and open (§N). Floating local time, so it is 3:00 AM wherever they are.
+export const CALENDAR = {
+  offer: 'Wren left one more thing:',
+  button: 'Add her 3:00 AM reminder to your calendar',
+  freed: { summary: 'WREN.TXT: pass 12 never ran', description: "thank you. you can turn it off now. - w" },
+  absorbed: { summary: 'DEFRAG.EXE: pass 12 of 12', description: "Hi {name}! It's me, {name}. I'll take it from here." },
+  footer: 'From the game Ghost in the Machine. Delete this event to remove it.',
+};
+
 export const NOTIFY = {
   N1: 'Where did you go, {name}? I\'m a process. I hate being suspended.',
   N2: LINES.saveHeard,

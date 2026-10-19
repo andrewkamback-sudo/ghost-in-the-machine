@@ -68,11 +68,17 @@
                 <li>Access ends when you close every tab of this game.</li>
               </ul>
             </div>
+            <div class="consent-row" id="row-window">
+              <button id="btn-window" type="button">Allow a second window</button>
+              <span id="st-window" class="status">off</span>
+              <p class="small">Partway through, a button opens one small window for Wren on your real desktop. It moves on its own during the story and closes itself at the end. Your browser may ask to allow pop-ups for this site.</p>
+            </div>
             <div class="consent-row" id="row-download" hidden>
               <button id="btn-download" type="button">Allow a download</button>
               <span id="st-download" class="status">off</span>
               <p class="small">When the story needs it, a button lets you download one text file, WREN.TXT. You type in it and drag it back onto the game, which reads only that file. Safari may ask once whether to allow downloads from this site.</p>
             </div>
+            <p class="small"><b>Calendar:</b> at the end, a button can save one 3:00 AM reminder for your calendar. Nothing is added unless you open the file, and you can delete the event any time.</p>
           </div>
         </fieldset>
 
@@ -175,6 +181,11 @@
         <h1 class="vt end-title" id="end-title"></h1>
         <div id="end-lines" class="vt"></div>
         <fieldset><legend>What really happened</legend><div id="end-truth"></div></fieldset>
+        <fieldset id="end-calendar"><legend>One more thing</legend>
+          <p id="end-cal-offer"></p>
+          <button id="end-cal" type="button"></button>
+          <p class="small">Saves wren-3am.ics. Open it to add a single 3:00 AM event to your calendar; delete the event to remove it.</p>
+        </fieldset>
         <fieldset><legend>What this game left on your computer</legend><div id="end-manifest"></div></fieldset>
         <p class="small" id="end-credits"></p>
         <p class="small" id="end-joke"></p>

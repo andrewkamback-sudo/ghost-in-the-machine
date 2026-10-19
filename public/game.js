@@ -17,6 +17,7 @@ let paused = false;
 let offline = params.has('offline');
 let fileMode = 'notepad'; // 'folder' | 'download' | 'notepad'
 let notifyOn = false;
+let windowOn = false; // Wren's own window, opt-in at boot
 let claims = []; // CLAIMS.TXT entries
 let noteMode = null; // what Notepad shows
 let pollTimer = null;
@@ -129,6 +130,7 @@ async function say(who, text, { cut = null, quote = null, history = true } = {})
     announce(`PAL: ${cut != null ? text.slice(0, cut) + '--' : text}`);
   } else if (who === 'wren') {
     const p = line('wren');
+    if (H.hasWrenWindow()) H.wrenWindowSay(text);
     await typeInto(p, text, { cps: 30, stutter: true });
     announce(`Red text: ${text}`);
   } else {
@@ -364,6 +366,28 @@ async function dialogFor(id) {
 // ---------- WREN.TXT: the file beat, the answer, the reply ----------
 
 async function fileBeat() {
+  await fileBeatInner();
+  if (windowOn) await offerWrenWindow();
+}
+
+async function offerWrenWindow() {
+  await say('wren', C.WREN_WINDOW.ask, { history: false });
+  const row = $('chat-actions');
+  row.hidden = false;
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = C.WREN_WINDOW.button;
+  b.addEventListener('click', () => {
+    b.remove();
+    if (!row.children.length) row.hidden = true;
+    if (!H.openWrenWindow()) { say('sys', C.WREN_WINDOW.blocked); return; }
+    H.wrenWindowSay("it's quieter in here. ▓▓▓ can still see this window. keep reading.");
+    $('chat-input').focus();
+  });
+  row.append(b);
+}
+
+async function fileBeatInner() {
   if (fileMode === 'folder') {
     const r = await H.writeWren(1, C.WREN_FILE.write1, C.WREN_FILE.write1Again);
     if (r.ok) {
@@ -550,6 +574,7 @@ async function possession(quote) {
   $('screen').append(ghost);
   pal.style.visibility = 'hidden';
   dialogShow(C.DIALOGS.possession);
+  const drift = H.wrenWindowDrift({ calm: player.calm });
   const steps = player.calm ? 1 : 3;
   for (let i = 1; i <= steps; i++) {
     const p = { x: start.x + (stop.x - start.x) * (i / steps), y: start.y + (stop.y - start.y) * (i / steps) };
@@ -560,6 +585,7 @@ async function possession(quote) {
   }
   // PAL yanks it back.
   await sleep(400);
+  await drift;
   ghost.remove();
   pal.style.visibility = '';
   bounce('pal');
@@ -616,6 +642,7 @@ async function ending(kind, answer) {
   if (kind === 'freed') {
     $('screen').classList.remove('possessed');
     await say('wren', C.LINES.freedWren);
+    H.closeWrenWindow(6000);
     if (fileMode === 'folder' && H.hasFolder()) {
       const epi = C.WREN_FILE.freed.map((l) => (l.includes('{answer}') && !answer ? C.WREN_FILE.freedNoAnswer : C.fill(l, { answer: answer || '' })));
       await H.writeWren(3, `\n====\n${epi.join('\n')}\n`);
@@ -625,6 +652,11 @@ async function ending(kind, answer) {
     await sleep(1300);
   } else {
     $('screen').classList.add('possessed');
+    if (H.hasWrenWindow()) {
+      H.wrenWindowTitle(`${v.NAME}.EXE`);
+      H.wrenWindowSay(C.fill(C.WREN_WINDOW.absorbed, v), { pal: true });
+      H.closeWrenWindow(6000);
+    }
     if (fileMode === 'folder' && H.hasFolder()) {
       await H.writeWren(3, `\n====\n${C.WREN_FILE.absorbed.map((l) => C.fill(l, v)).join('\n')}\n`);
     }
@@ -657,15 +689,29 @@ function endCard(kind) {
   }
   $('end-lines').replaceChildren(...lines);
   $('end-truth').replaceChildren(...e.truth.map((t) => para(t)));
+  $('end-cal-offer').textContent = C.CALENDAR.offer;
+  $('end-cal').textContent = C.CALENDAR.button;
+  $('end-cal').disabled = false;
+  $('end-cal').onclick = () => {
+    const ev = C.CALENDAR[kind];
+    H.saveIcs({ summary: C.fill(ev.summary, v), description: `${C.fill(ev.description, v)}\n\n${C.CALENDAR.footer}` });
+    $('end-cal').disabled = true;
+    $('end-cal').textContent = 'Saved wren-3am.ics. Open it to add the event.';
+    renderManifest();
+  };
+  renderManifest();
+  $('end-credits').textContent = C.ENDINGS.credits;
+  $('end-joke').textContent = C.ENDINGS.creditsJoke;
+  end.hidden = false;
+}
+
+function renderManifest() {
   const m = H.manifest({ fileMode, notifications: notifyOn });
   const nodes = m.items.map((t) => para(t));
   if (m.remove.length) nodes.push(para('To remove it:', 'small'), ...m.remove.map((t) => para(t)));
   if (notifyOn) nodes.push(para('To stop notifications: open the site controls next to the address bar, then Notifications, then Block or Reset.'));
   nodes.push(para('The game never sent what you typed into WREN.TXT anywhere.'), para('The Recycle Bin in this game is fictional. Emptying it deleted nothing on your computer.'));
   $('end-manifest').replaceChildren(...nodes);
-  $('end-credits').textContent = C.ENDINGS.credits;
-  $('end-joke').textContent = C.ENDINGS.creditsJoke;
-  end.hidden = false;
 }
 
 $('boot-again').addEventListener('click', () => {
@@ -779,6 +825,11 @@ $('btn-folder').addEventListener('click', async () => {
   } catch {
     setStatus('st-folder', 'off');
   }
+});
+
+$('btn-window').addEventListener('click', () => {
+  windowOn = !windowOn;
+  setStatus('st-window', windowOn ? 'on' : 'off');
 });
 
 $('btn-download').addEventListener('click', () => {

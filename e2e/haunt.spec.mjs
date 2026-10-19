@@ -144,3 +144,39 @@ test('notifications: only after the click, at most 3, never before opting in', a
   expect(out.sent).toEqual([true, true, true, false]);
   expect(out.log.map((n) => n.body)).toEqual(['line 1', 'line 2', 'line 3']);
 });
+
+test('the 3:00 AM calendar file: next 3 AM in local time, an alarm, folded lines', async ({ page }) => {
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.evaluate(async () => { const H = await import('/haunt.js'); H.saveIcs({ summary: 'DEFRAG.EXE: pass 12 of 12', description: "Hi José! It's me, José. I'll take it from here.\n\nFrom the game Ghost in the Machine. Delete this event to remove it." }); }),
+  ]);
+  expect(download.suggestedFilename()).toBe('wren-3am.ics');
+  const fs = await import('node:fs/promises');
+  const ics = await fs.readFile(await download.path(), 'utf8');
+  expect(ics).toMatch(/^BEGIN:VCALENDAR\r\n/);
+  expect(ics).toMatch(/DTSTART:\d{8}T030000\r\n/); // floating local time, no Z
+  expect(ics).toContain('BEGIN:VALARM');
+  expect(ics).toContain('SUMMARY:DEFRAG.EXE: pass 12 of 12');
+  for (const line of ics.split('\r\n')) expect(Buffer.byteLength(line)).toBeLessThanOrEqual(75);
+  const next = await page.evaluate(async () => {
+    const H = await import('/haunt.js');
+    return [H.nextThreeAM(new Date(2026, 9, 21, 2, 59)).getDate(), H.nextThreeAM(new Date(2026, 9, 21, 3, 1)).getDate()];
+  });
+  expect(next).toEqual([21, 22]);
+});
+
+test("Wren's window opens on a click, shows her lines, and closes itself", async ({ page, context }, info) => {
+  test.skip(info.project.name === 'webkit', 'pop-up windows from script are not reliable in WebKit automation');
+  await page.evaluate(() => { document.body.insertAdjacentHTML('beforeend', '<button id="t-open" style="position:fixed;top:0;left:0;z-index:9999">open</button>'); });
+  await page.evaluate(async () => {
+    window.H = await import('/haunt.js');
+    document.getElementById('t-open').onclick = () => { window.opened = window.H.openWrenWindow(); };
+  });
+  const [popup] = await Promise.all([context.waitForEvent('page'), page.click('#t-open')]);
+  await popup.waitForLoadState();
+  await page.evaluate(async () => { await window.H.wrenWindowSay('defrag isn\'t maintenance.'); await window.H.wrenWindowDrift({ calm: true }); });
+  await expect(popup.locator('#lines')).toContainText("defrag isn't maintenance.");
+  await page.evaluate(() => window.H.closeWrenWindow(0));
+  await popup.waitForEvent('close');
+  expect(await page.evaluate(() => window.H.hasWrenWindow())).toBe(false);
+});

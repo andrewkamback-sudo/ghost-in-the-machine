@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>wren</title>
+  <style>
+    @font-face { font-family: "VT323"; src: url(fonts/VT323.woff2) format("woff2"); font-display: block; }
+    html, body { margin: 0; height: 100%; background: #000; }
+    body { font-family: "VT323", monospace; font-size: 20px; line-height: 1.15; color: #ff5555; padding: 10px 12px; box-sizing: border-box; overflow-y: auto; }
+    p { margin: 0 0 8px; }
+    p.pal { color: #e8d9c0; }
+    .hint { color: #6b0f1a; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <!-- The game writes Wren's lines here; this window has no script of its own. -->
+  <div id="lines"><p class="hint">...</p></div>
+</body>
+</html>

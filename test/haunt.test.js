@@ -21,7 +21,7 @@ test('every writable keeps existing data', () => {
 });
 
 test('no other public file touches the real machine', () => {
-  const touch = /showDirectoryPicker|getFileHandle|getDirectoryHandle|createWritable|\bnew Notification\b|Notification\.requestPermission/;
+  const touch = /showDirectoryPicker|getFileHandle|getDirectoryHandle|createWritable|\bnew Notification\b|Notification\.requestPermission|window\.open\(|\.download\s*=/;
   for (const f of readdirSync(new URL('../public/', import.meta.url))) {
     if (!f.endsWith('.js') || f === 'haunt.js') continue;
     assert.doesNotMatch(src(f), touch, `${f} must leave the real machine to haunt.js`);
