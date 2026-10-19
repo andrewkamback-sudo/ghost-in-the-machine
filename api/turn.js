@@ -32,7 +32,7 @@ const fallbacksOff = new Set();
 
 const MODEL = {
   pal: () => process.env.MODEL_PAL || 'claude-sonnet-5-5',
-  wren: () => process.env.MODEL_WREN || 'claude-haiku-5-5',
+  wren: () => process.env.MODEL_WREN || 'claude-opus-5-5', // Mon Oct 19 benchmark pick
 };
 
 function thinkingFor(model) {

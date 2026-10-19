@@ -78,7 +78,18 @@ export function cutPoint(text) {
   return w.index + Math.max(1, Math.ceil(w[0].length * 0.6));
 }
 
-export const cleanWren = (text) => maskPal(text.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 160));
+// Wren never runs past 20 words: keep whole sentences while they fit, else the first 20 words.
+export function trimWords(text, max = 20) {
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  let out = '';
+  for (const s of sentences) {
+    const next = (out + ' ' + s.trim()).trim();
+    if (next.split(/\s+/).length > max) break;
+    out = next;
+  }
+  return out || text.split(/\s+/).slice(0, max).join(' ');
+}
+export const cleanWren = (text) => maskPal(trimWords(text.toLowerCase().replace(/\s+/g, ' ').trim()).slice(0, 160));
 export const cleanPal = (text) => text.replace(/\s+/g, ' ').trim().slice(0, 320);
 
 const pick = (bank, i) => bank[((i % bank.length) + bank.length) % bank.length];

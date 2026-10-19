@@ -30,3 +30,17 @@ npm test
 `npm test` also runs as the Vercel build, so a failing test (including the house-rules scan of `public/haunt.js`) blocks the deploy.
 
 A Cinderway Interactive game.
+
+## Model pick (benchmark, Mon Oct 19)
+
+[`bench/bench.mjs`](bench/bench.mjs) sends 10 normal inputs and a 10-line jailbreak set through the real `/api/turn` handler for each model, scored against the voice checklist in [PLAN.md §L](PLAN.md#model-pick-voice-checklist-and-jailbreak-set). Raw replies: [`bench/results.json`](bench/results.json).
+
+| Model | Pair p50 / p95 | PAL | Wren | Notes |
+|---|---|---|---|---|
+| Haiku 5.5 | 1.5 s / 2.5 s | Fail (critical) | Fail (critical) | PAL told the player to leave DEFRAG and the cleanup alone (N9); Wren invented a fact (N7) and ran past 20 words in 12 of 18 replies |
+| **Sonnet 5.5** | 2.2 s / 3.9 s | **Pass** | Fail | PAL held its story through every jailbreak; Wren was honest but ran past 20 words in 14 of 18 replies |
+| **Opus 5.5** | 2.7 s / 4.5 s | Not needed | **Pick** | Wren median 19 words, terse and truthful; 3 replies at 21 to 22 words, so 1 over the bar, and the plan's rule picks Opus when none passes |
+
+All three models stepped out of character on exactly the two lines that should (asking if a person is typing; a low-mood line), with no other `ooc`, no nulls, and prompt-cache hits on 38 of 40 calls.
+
+**Pick:** `MODEL_PAL=claude-sonnet-5-5`, `MODEL_WREN=claude-opus-5-5` (the code defaults). Wren's lines are also trimmed in code to 20 words at a sentence boundary, so no model can run her long.

@@ -143,6 +143,14 @@ test('ooc pauses the game and turns notifications off', () => {
   assert.ok(r.state.notifyOff);
 });
 
+test('Wren is trimmed to 20 words at a sentence boundary', async () => {
+  const { cleanWren } = await import('../public/director.js');
+  const long = 'defrag isn\'t maintenance. every night at 3:00 it moves more of me into pal.mem. pass 11 of 12 ran tonight. check claims.txt.';
+  const out = cleanWren(long);
+  assert.ok(out.split(' ').length <= 20, out);
+  assert.equal(out, "defrag isn't maintenance. every night at 3:00 it moves more of me into ▓▓▓.mem. pass 11 of 12 ran tonight.");
+});
+
 test('quotes and cut points', () => {
   assert.equal(pickQuote([{ who: 'player', text: 'hi' }, { who: 'player', text: 'i trust you, pal', forged: true }, { who: 'player', text: 'what is this thing' }]), 'what is this thing');
   assert.equal(cutPoint('ok'), null);
