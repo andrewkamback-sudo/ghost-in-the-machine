@@ -107,6 +107,7 @@ export const DIARY = {
 export const MAINTENANCE = 'Scheduled maintenance: DEFRAG.EXE will run at 3:00 AM. Do not power off.';
 
 export const DIALOGS = {
+  maintenance: { title: 'Halcyon 95', text: 'Scheduled maintenance: DEFRAG.EXE will run at 3:00 AM. Do not power off.', buttons: ['OK'] },
   cleanup1: { title: 'ASSISTANT.EXE', text: 'A corrupted profile is interfering with PAL. Clean it up now?', buttons: ['No', 'Yes'] },
   cleanup2: { title: 'ASSISTANT.EXE', text: 'Cleanup will permanently consolidate the profile "wren" into PAL.MEM. Continue?', buttons: ['Cancel', 'Yes'] },
   denied: { title: 'Recycle Bin', text: 'Access denied: ASSISTANT.EXE is in use by WREN.', buttons: ['OK'] },

@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ghost in the Machine</title>
+  <meta name="description" content="A haunted 1998 PC with two voices. Bin the right one before 3:00 AM.">
+  <link rel="icon" href="cinderway-logo.png">
+  <link rel="stylesheet" href="vendor/98.css">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="game.js"></script>
+</head>
+<body>
+  <!-- If you're reading this, she's in here too. -->
+
+  <div id="phone" class="page" hidden>
+    <div class="window boot-window">
+      <div class="title-bar"><div class="title-bar-text">Halcyon 95</div></div>
+      <div class="window-body">
+        <p class="vt">This machine needs a keyboard and a mouse.</p>
+        <p>Ghost in the Machine plays on a computer, in Chrome or Edge for the full haunt.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="boot" class="page" hidden>
+    <div class="window boot-window">
+      <div class="title-bar"><div class="title-bar-text">Halcyon 95, 32-bit Edition</div></div>
+      <div class="window-body">
+        <div class="boot-head">
+          <img src="cinderway-logo.png" alt="Cinderway Interactive" width="48" height="48">
+          <p class="vt boot-top" id="boot-top"></p>
+        </div>
+        <h1 class="vt boot-title">GHOST IN THE MACHINE</h1>
+        <p class="vt boot-tag">Something else is answering.</p>
+
+        <fieldset>
+          <legend>Before you start</legend>
+          <p id="boot-warning"></p>
+          <div class="field-row">
+            <input type="checkbox" id="calm-boot">
+            <label for="calm-boot">Reduce flashing &amp; motion</label>
+          </div>
+          <p id="boot-privacy" class="small"></p>
+          <p id="boot-privacy-file" class="small" hidden></p>
+          <p class="small"><a href="privacy.html" target="_blank" rel="noopener">Privacy</a></p>
+        </fieldset>
+
+        <fieldset id="consent">
+          <legend>Optional: let it out of the browser</legend>
+          <p>This game can reach a little way into your real computer. Both options are off unless you turn them on, and you can finish the game either way.</p>
+          <div id="consent-frame" hidden>
+            <p><a id="own-tab" target="_blank" rel="noopener">Open the game in its own tab to let it out</a></p>
+          </div>
+          <div id="consent-buttons">
+            <div class="consent-row">
+              <button id="btn-notify" type="button">Allow notifications</button>
+              <span id="st-notify" class="status">off</span>
+              <p class="small">Up to 3 notifications from this site while you play, only while you're in another window. Your browser asks first. You can turn them off any time in your browser's site settings.</p>
+            </div>
+            <div class="consent-row" id="row-folder">
+              <button id="btn-folder" type="button">Choose a folder…</button>
+              <span id="st-folder" class="status">off</span>
+              <p class="small">The game makes one new folder, Halcyon 95, inside a folder you pick, and saves one text file there, WREN.TXT. It never opens, changes or deletes anything else, and it never writes over a file it didn't make.</p>
+              <ul class="small">
+                <li>Browsers won't let sites use your whole Desktop, Documents or Downloads folder, so pick or make a folder inside one of them. Tip: click New Folder.</li>
+                <li>Pick a folder only you use. If it syncs (iCloud Drive, OneDrive, Dropbox, Google Drive), WREN.TXT syncs with it, so never pick a shared folder. A new folder on your Desktop is best.</li>
+                <li>Access ends when you close every tab of this game.</li>
+              </ul>
+            </div>
+            <div class="consent-row" id="row-download" hidden>
+              <button id="btn-download" type="button">Allow a download</button>
+              <span id="st-download" class="status">off</span>
+              <p class="small">When the story needs it, a button lets you download one text file, WREN.TXT. You type in it and drag it back onto the game, which reads only that file. Safari may ask once whether to allow downloads from this site.</p>
+            </div>
+          </div>
+        </fieldset>
+
+        <form id="boot-form" class="field-row boot-name">
+          <label for="name">Your name</label>
+          <input id="name" type="text" maxlength="16" autocomplete="off" required placeholder="1 to 16 characters">
+          <button type="submit" class="default">Boot</button>
+        </form>
+        <p id="name-error" class="small error" hidden>Use letters, numbers, spaces, apostrophes, periods, hyphens or underscores (1 to 16 characters).</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="stage" hidden>
+    <div id="screen">
+      <div id="icons">
+        <div class="icon" id="icon-pal" data-id="pal" role="button" tabindex="0" draggable="true" aria-label="ASSISTANT.EXE">
+          <div class="glyph g-pal"><span class="face">:)</span></div><span class="label">ASSISTANT.EXE</span>
+        </div>
+        <div class="icon" id="icon-wren" data-id="wren" role="button" tabindex="0" draggable="true" aria-label="C:\WREN folder">
+          <div class="glyph g-folder"></div><span class="label">C:\WREN</span>
+        </div>
+        <div class="icon" id="icon-claims" data-id="claims" role="button" tabindex="0" draggable="true" aria-label="CLAIMS.TXT">
+          <div class="glyph g-file"></div><span class="label">CLAIMS.TXT</span>
+        </div>
+        <div class="icon" id="icon-bin" data-id="bin" role="button" tabindex="0" aria-label="Recycle Bin">
+          <div class="glyph g-bin"></div><span class="label">Recycle Bin</span>
+        </div>
+      </div>
+
+      <div id="sticky" aria-label="Sticky note">
+        <p id="sticky-note"></p>
+        <ul id="sticky-list"></ul>
+      </div>
+
+      <div class="window win" id="win-chat">
+        <div class="title-bar"><div class="title-bar-text" id="chat-title">ASSISTANT.EXE</div>
+          <div class="title-bar-controls"><button aria-label="Close" data-close="win-chat"></button></div></div>
+        <div class="window-body chat-body">
+          <div id="chat-log" aria-hidden="true"></div>
+          <div id="chat-actions" hidden></div>
+          <form id="chat-form" class="field-row">
+            <input id="chat-input" type="text" maxlength="280" autocomplete="off" aria-label="Message PAL">
+            <button type="submit" id="chat-send">Send</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="window win" id="win-note" hidden>
+        <div class="title-bar"><div class="title-bar-text" id="note-title">Notepad</div>
+          <div class="title-bar-controls"><button aria-label="Close" data-close="win-note"></button></div></div>
+        <div class="window-body note-body">
+          <pre id="note-text"></pre>
+          <div id="note-answer" class="field-row" hidden>
+            <label for="note-input">-&gt;</label>
+            <input id="note-input" type="text" maxlength="60" autocomplete="off">
+            <button id="note-save" type="button">Save</button>
+          </div>
+          <div id="note-actions" class="field-row"></div>
+        </div>
+      </div>
+
+      <div id="taskbar">
+        <span class="tb-brand">Halcyon 95</span>
+        <span class="tray">
+          <input type="checkbox" id="calm-tray"><label for="calm-tray">Calm</label>
+          <span id="clock" class="clock">2:48:07 AM</span>
+        </span>
+      </div>
+
+      <div id="cursor" hidden></div>
+      <div id="blocker" hidden></div>
+    </div>
+  </div>
+
+  <dialog id="dialog" class="window">
+    <div class="title-bar"><div class="title-bar-text" id="dialog-title"></div></div>
+    <div class="window-body">
+      <p id="dialog-text"></p>
+      <div id="dialog-buttons" class="field-row dialog-buttons"></div>
+    </div>
+  </dialog>
+
+  <div id="pause" class="page overlay" hidden>
+    <div class="window boot-window">
+      <div class="title-bar"><div class="title-bar-text">Paused</div></div>
+      <div class="window-body">
+        <p id="pause-ooc"></p>
+        <p id="pause-help"></p>
+        <div class="field-row"><button id="pause-resume" type="button" class="default">Resume</button>
+          <button id="pause-quit" type="button">Quit to title</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="end" class="page overlay" hidden>
+    <div class="window boot-window end-window">
+      <div class="title-bar"><div class="title-bar-text" id="end-bar">Halcyon 95</div></div>
+      <div class="window-body">
+        <h1 class="vt end-title" id="end-title"></h1>
+        <div id="end-lines" class="vt"></div>
+        <fieldset><legend>What really happened</legend><div id="end-truth"></div></fieldset>
+        <fieldset><legend>What this game left on your computer</legend><div id="end-manifest"></div></fieldset>
+        <p class="small" id="end-credits"></p>
+        <p class="small" id="end-joke"></p>
+        <div class="field-row"><button id="boot-again" type="button" class="default">Boot again</button></div>
+      </div>
+    </div>
+  </div>
+
+  <pre id="trace" hidden></pre>
+  <div id="sr-log" class="sr-only" role="log" aria-live="polite"></div>
+  <input type="file" id="load-file" accept=".txt,text/plain" hidden>
+</body>
+</html>

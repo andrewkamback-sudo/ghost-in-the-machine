@@ -1,0 +1,135 @@
+@font-face {
+  font-family: "VT323";
+  src: url(fonts/VT323.woff2) format("woff2");
+  font-display: block;
+}
+
+:root {
+  --teal: #008080;
+  --sticky: #ffff80;
+  --void: #140c1c;
+  --scab: #3a0010;
+  --blood: #6b0f1a;
+  --wound: #a4243b;
+  --bone: #e8d9c0;
+  --wren-light: #c00000;
+  --wren-dark: #ff5555;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #000; color: #222; }
+body { font-family: "Pixelated MS Sans Serif", Arial, sans-serif; font-size: 11px; overflow: hidden; }
+img, canvas { image-rendering: pixelated; }
+.vt { font-family: "VT323", monospace; }
+.small { font-size: 11px; }
+.error { color: var(--wren-light); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+[hidden] { display: none !important; }
+
+/* Page-level screens (boot, pause, end): normal resolution, scrollable. */
+.page { position: fixed; inset: 0; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding: 24px 12px; background: #000; z-index: 50; }
+.page.overlay { background: rgba(0, 0, 0, 0.82); }
+.boot-window { width: min(620px, 100%); }
+.boot-window .window-body { font-size: 12px; line-height: 1.45; }
+.boot-head { display: flex; gap: 12px; align-items: center; }
+.boot-top { font-size: 20px; margin: 0; }
+.boot-title { font-size: 40px; margin: 8px 0 0; letter-spacing: 1px; }
+.boot-tag { font-size: 20px; margin: 0 0 12px; }
+.boot-window fieldset { margin: 10px 0; }
+.boot-window ul { margin: 4px 0 0 18px; padding: 0; }
+.consent-row { margin: 8px 0 12px; }
+.consent-row p { margin: 4px 0; }
+.status { margin-left: 8px; font-weight: 700; }
+.status.on { color: #006400; }
+.boot-name { margin-top: 12px; }
+.boot-name input { width: 180px; }
+
+/* The stage: a 512x384 logical screen, scaled by JS, letterboxed on black. */
+#stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+#screen { position: relative; width: 512px; height: 384px; background: var(--teal); overflow: hidden; transform-origin: center; }
+#screen.possessed { background: var(--blood); }
+
+#icons { position: absolute; left: 4px; top: 6px; bottom: 30px; width: 64px; }
+.icon { position: absolute; left: -2px; width: 70px; display: flex; flex-direction: column; align-items: center; cursor: default; padding: 2px; outline: none; }
+.icon .label { color: #fff; font-size: 11px; letter-spacing: -0.5px; white-space: nowrap; margin-top: 2px; padding: 0 1px; text-align: center; }
+.icon:focus .label, .icon.selected .label { background: navy; outline: 1px dotted #fff; }
+#icon-pal { top: 0; } #icon-wren { top: 58px; } #icon-claims { top: 116px; } #icon-bin { top: 290px; }
+.glyph { width: 32px; height: 32px; position: relative; }
+.g-pal { background: #c0c0c0; box-shadow: inset 0 0 0 2px #404040, inset 0 0 0 5px #808080; display: flex; align-items: center; justify-content: center; }
+.g-pal .face { font-family: "VT323", monospace; font-size: 16px; color: #0f0; background: #003300; padding: 0 3px; line-height: 14px; }
+.cracked .g-pal { background: linear-gradient(135deg, transparent 47%, var(--wren-dark) 48%, var(--wren-dark) 52%, transparent 53%), #c0c0c0; }
+.cracked .g-pal .face { color: var(--wren-dark); background: #200; }
+.g-folder { background: #e8c547; height: 24px; margin-top: 6px; box-shadow: inset 0 0 0 1px #806000; }
+.g-folder::before { content: ""; position: absolute; left: 0; top: -5px; width: 14px; height: 6px; background: #e8c547; box-shadow: inset 0 0 0 1px #806000; }
+.g-file { background: #fff; width: 24px; box-shadow: inset 0 0 0 1px #000; }
+.g-file::after { content: ""; position: absolute; left: 4px; right: 4px; top: 8px; height: 12px; background: repeating-linear-gradient(#808080 0 1px, transparent 1px 4px); }
+.g-bin { background: #c0c0c0; width: 26px; box-shadow: inset 0 0 0 1px #404040; background-image: repeating-linear-gradient(90deg, #808080 0 1px, transparent 1px 5px); }
+.full .g-bin { background-color: #e0e0e0; box-shadow: inset 0 0 0 1px #404040, inset 0 6px 0 #fff; }
+.drop-target .g-bin { outline: 2px dotted #fff; }
+.icon.binned { display: none; }
+
+@keyframes shake { 0%, 100% { translate: 0; } 25% { translate: -2px 0; } 75% { translate: 2px 0; } }
+.shake { animation: shake 0.4s steps(4) 1; }
+.calm .shake { animation: none; }
+
+#sticky { position: absolute; right: 6px; top: 6px; width: 118px; background: var(--sticky); padding: 6px; font-family: "VT323", monospace; font-size: 15px; line-height: 14px; color: #222; box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35); }
+#sticky p { margin: 0 0 6px; }
+#sticky ul { list-style: none; margin: 0; padding: 0; }
+#sticky li::before { content: "[ ] "; }
+#sticky li.done { text-decoration: line-through; }
+#sticky li.done::before { content: "[x] "; }
+
+.win { position: absolute; }
+.win { z-index: 2; }
+.win.front { z-index: 4; }
+#win-chat { left: 74px; top: 6px; width: 308px; height: 312px; }
+#win-note { left: 160px; top: 40px; width: 300px; height: 262px; }
+.chat-body { display: flex; flex-direction: column; height: calc(100% - 22px); margin: 4px; }
+#chat-log { flex: 1; overflow-y: auto; background: #fff; padding: 4px; box-shadow: inset -1px -1px #fff, inset 1px 1px grey, inset -2px -2px #dfdfdf, inset 2px 2px #0a0a0a; }
+#chat-log .line { margin: 0 0 5px; white-space: pre-wrap; word-wrap: break-word; }
+#chat-log .who { font-weight: 700; }
+#chat-log .player .who { color: navy; }
+#chat-log .sys { color: #555; font-style: italic; }
+#chat-log .wren { font-family: "VT323", monospace; font-size: 15px; color: var(--wren-light); }
+#chat-log u.quote { text-decoration: underline; text-decoration-color: var(--wren-light); border: 0; }
+#chat-actions { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 0 0; }
+#chat-form { margin-top: 4px; }
+#chat-input { flex: 1; min-width: 0; }
+#chat-send { min-width: 50px; }
+.note-body { display: flex; flex-direction: column; height: calc(100% - 22px); margin: 4px; gap: 4px; }
+#note-text { flex: 1; overflow: auto; margin: 0; padding: 6px; white-space: pre-wrap; font-family: "VT323", monospace; font-size: 15px; line-height: 15px; color: #000; }
+#note-text.wren-type { color: var(--wren-light); font-size: 17px; line-height: 17px; }
+#note-text .stamp { color: var(--wren-light); font-size: 22px; }
+#note-input { flex: 1; min-width: 0; }
+
+#taskbar { position: absolute; left: 0; right: 0; bottom: 0; height: 26px; background: silver; box-shadow: inset 0 1px #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 4px; z-index: 5; }
+.tb-brand { font-weight: 700; padding: 3px 6px; box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff; }
+.tray { display: flex; align-items: center; gap: 6px; padding: 2px 6px; box-shadow: inset -1px -1px #dfdfdf, inset 1px 1px grey; }
+.tray label { margin-right: 4px; }
+
+/* Possessed: the desktop goes to the corruption palette; chat and Notepad keep contrast. */
+.possessed #taskbar { background: var(--scab); color: var(--bone); }
+.possessed .tb-brand, .possessed .tray { color: var(--bone); }
+.possessed .title-bar { background: linear-gradient(90deg, var(--scab), var(--wound)); }
+.possessed #sticky { background: var(--bone); }
+.possessed #sticky li:last-child { color: var(--wren-light); }
+
+#cursor { position: absolute; left: 0; top: 0; width: 12px; height: 18px; background: var(--wren-dark); clip-path: polygon(0 0, 0 100%, 30% 75%, 50% 100%, 65% 92%, 45% 68%, 100% 68%); z-index: 20; pointer-events: none; }
+#blocker { position: absolute; inset: 0; z-index: 19; cursor: none; }
+.drag-ghost { position: absolute; z-index: 18; pointer-events: none; }
+
+dialog.window { padding: 3px; border: 0; min-width: 260px; max-width: 360px; }
+dialog::backdrop { background: transparent; }
+.dialog-buttons { justify-content: center; margin-top: 10px; }
+
+.end-window .window-body { font-size: 12px; }
+.end-title { font-size: 44px; margin: 4px 0; }
+#end-lines p { font-size: 20px; margin: 2px 0; }
+#end.absorbed .end-window { background: #5a0a14; color: var(--bone); }
+#end.absorbed fieldset legend { background: #5a0a14; }
+#end.absorbed a { color: var(--wren-dark); }
+
+#trace { position: fixed; right: 8px; bottom: 8px; width: min(520px, 90vw); max-height: 60vh; overflow: auto; z-index: 60; font-size: 11px; font-family: monospace; }
+
+body.fade #stage { transition: opacity 1.2s steps(8); opacity: 0; }
+body.wait, body.wait * { cursor: wait !important; }
