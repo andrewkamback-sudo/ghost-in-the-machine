@@ -119,10 +119,13 @@ export function reduce(prev, ev) {
     s.repairPending = false;
     cmds.push({ t: 'act', act: 2 });
     story('never_existed');
+    cmds.push({ t: 'beat', ms: 700 });
     pal(LINES.act2Story);
+    cmds.push({ t: 'beat', ms: 1400 }, { t: 'glitch', kind: 'static' });
     wren(LINES.wrenFirst);
+    cmds.push({ t: 'beat', ms: 500 });
     pal(LINES.palNotMe);
-    cmds.push({ t: 'file_beat' }, { t: 'sticky', item: 'where', add: true });
+    cmds.push({ t: 'beat', ms: 900 }, { t: 'file_beat' }, { t: 'sticky', item: 'where', add: true });
   };
 
   // The cleanup offer is forced right after PAL's reply to Act 2 turn 1 (§C).

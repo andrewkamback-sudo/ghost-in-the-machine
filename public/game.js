@@ -56,6 +56,8 @@ async function drain() {
 
 async function run(c) {
   switch (c.t) {
+    case 'beat': return sleep(c.ms / SPEED);
+    case 'glitch': return glitch(c.kind);
     case 'pal': return say('pal', c.text, { cut: c.cut, quote: c.quote });
     case 'wren': return say('wren', c.text);
     case 'claims': claims.push({ at: c.at, text: C.STORY[c.story] }); if (noteMode === 'claims') showClaims(); return;
@@ -69,7 +71,7 @@ async function run(c) {
     case 'file_reply': return fileReply(c.no);
     case 'notify': return notifyN(c.n);
     case 'possession': return possession(c.quote);
-    case 'act': if (c.act === 4) $('screen').classList.add('possessed'); return;
+    case 'act': if (c.act === 2) creep(); if (c.act === 4) $('screen').classList.add('possessed'); return;
     case 'cracked': $('icon-pal').classList.add('cracked'); return;
     case 'binned': $('icon-pal').classList.add('binned'); $('icon-bin').classList.add('full'); return;
     case 'ending': return ending(c.kind, c.answer);
@@ -128,6 +130,7 @@ async function say(who, text, { cut = null, quote = null, history = true } = {})
     const span = await typeInto(p, text, { cut });
     if (quote && cut == null) underline(span, quote);
     announce(`PAL: ${cut != null ? text.slice(0, cut) + '--' : text}`);
+    if (cut == null) await sleep(300 / SPEED);
   } else if (who === 'wren') {
     const p = line('wren');
     if (H.hasWrenWindow()) H.wrenWindowSay(text);
@@ -233,6 +236,7 @@ function openIcon(id) {
   if (id === 'wren') { showDiary(); dispatch({ type: 'open', id: 'diary' }); }
   if (id === 'claims') { showClaims(); dispatch({ type: 'open', id: 'claims' }); }
   if (id === 'bin') showBin();
+  if (id === 'note') notepadCopy();
 }
 
 function note(title, text, mode) {
@@ -403,7 +407,13 @@ async function fileBeatInner() {
     return;
   }
   await say('wren', C.FILE_BEAT.notepad, { history: false });
-  notepadCopy();
+  revealNote();
+}
+
+// Her note appears on the desktop as a new icon instead of jumping over the chat.
+function revealNote() {
+  $('icon-note').hidden = false;
+  waitingAnswer = true;
 }
 
 function notepadCopy() {
@@ -440,6 +450,7 @@ function downloadActions() {
   here.type = 'button';
   here.textContent = 'Read it here';
   here.addEventListener('click', () => notepadCopy());
+  revealNote();
   const load = document.createElement('button');
   load.type = 'button';
   load.textContent = 'Load WREN.TXT…';
@@ -530,6 +541,47 @@ function sendN3() {
   H.notify('Halcyon 95', C.fill(text, v));
 }
 
+// ---------- Glitches (no flashing in calm mode) ----------
+
+function glitch(kind) {
+  if (player.calm && (kind === 'static' || kind === 'flicker')) return;
+  const el = kind === 'static' ? $('static') : $('screen');
+  const cls = kind === 'static' ? 'burst' : 'flicker';
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+
+// Scramble the visible chat for a moment, then restore it.
+function corruptChat(ms) {
+  const spans = [...log.querySelectorAll('.line > span:not(.who)')].slice(-6);
+  const saved = spans.map((sp) => sp.textContent);
+  spans.forEach((sp) => { sp.textContent = sp.textContent.replace(/\S/g, (ch, i) => (i % 3 ? '▓' : ch)); });
+  setTimeout(() => spans.forEach((sp, i) => { sp.textContent = saved[i]; }), ms);
+}
+
+// Act 2: small things go wrong while the player isn't looking straight at them.
+function creep() {
+  const run = S;
+  const at = (ms, fn) => setTimeout(() => { if (S === run && S.act === 2 && !paused) fn(); }, ms / SPEED);
+  at(18000, () => {
+    const clock = $('clock');
+    clock.textContent = '??:??:?? AM';
+    setTimeout(() => { clock.textContent = `${D.clock(S.sec)} AM`; }, 900);
+  });
+  at(34000, () => {
+    const label = $('icon-wren').querySelector('.label');
+    label.textContent = 'C:\\HER';
+    setTimeout(() => { label.textContent = 'C:\\WREN'; }, 1600);
+  });
+  at(52000, () => {
+    const title = $('chat-title');
+    const old = title.textContent;
+    title.textContent = 'ASSISTANT.EXE (she can hear you)';
+    setTimeout(() => { title.textContent = old; }, 1200);
+  });
+}
+
 // ---------- THE POSSESSION (16 s, no network) ----------
 
 function centerOf(el) {
@@ -556,6 +608,9 @@ async function possession(quote) {
   await sleep(1000);
   const oldTitle = document.title;
   document.title = "she's still here";
+  glitch('static');
+  glitch('flicker');
+  corruptChat(1400);
   $('screen').classList.add('possessed');
   const cur = $('cursor');
   cur.style.left = '200px';
@@ -592,6 +647,7 @@ async function possession(quote) {
   $('screen').classList.toggle('shake', !player.calm);
   setTimeout(() => $('screen').classList.remove('shake'), 500);
   dialogHide();
+  glitch('static');
   // The chat types as the player.
   winOpen('win-chat');
   await moveCursor(centerOf($('chat-input')), 600);
@@ -679,6 +735,7 @@ function endCard(kind) {
   const end = $('end');
   end.classList.toggle('absorbed', kind === 'absorbed');
   $('end-title').textContent = C.fill(e.title, v);
+  $('end-voice').textContent = kind === 'freed' ? C.LINES.freedWren : C.fill(C.NOTIFY.N3absorbed, v);
   $('end-bar').textContent = kind === 'freed' ? 'Halcyon 95' : `${v.NAME}.EXE`;
   const f = H.fileState();
   const fileLeft = (fileMode === 'folder' && f.madeFile && !f.fileFailed) || (fileMode === 'download' && f.downloaded);
@@ -703,6 +760,14 @@ function endCard(kind) {
   $('end-credits').textContent = C.ENDINGS.credits;
   $('end-joke').textContent = C.ENDINGS.creditsJoke;
   end.hidden = false;
+  reveal();
+}
+
+// The end card reveals its lines one at a time.
+async function reveal() {
+  const groups = [$('end-lines'), $('end-truth')];
+  for (const g of groups) g.classList.add('reveal');
+  for (const g of groups) for (const el of g.children) { await sleep(player.calm ? 0 : 650); el.classList.add('shown'); }
 }
 
 function renderManifest() {
@@ -782,10 +847,39 @@ $('calm-tray').addEventListener('change', (e) => setCalm(e.target.checked));
 
 // ---------- Boot ----------
 
-function bootScreen() {
+// A BIOS screen types out first; any key or click skips it.
+async function post() {
+  const box = $('post');
+  const pre = $('post-text');
+  box.hidden = false;
+  let skip = false;
+  const done = () => { skip = true; };
+  addEventListener('keydown', done, { once: true });
+  box.addEventListener('pointerdown', done, { once: true });
+  for (const l of C.POST) {
+    if (skip) break;
+    const span = document.createElement('span');
+    if (l.bad) span.className = 'bad';
+    pre.append(span);
+    for (const ch of l.text) {
+      if (skip) break;
+      span.textContent += ch;
+      if (l.slow) await sleep(18);
+    }
+    span.textContent = l.text;
+    pre.append('\n');
+    await sleep(skip ? 0 : l.pause ?? 160);
+  }
+  if (!skip) await sleep(700);
+  removeEventListener('keydown', done);
+  box.hidden = true;
+}
+
+async function bootScreen() {
   if (matchMedia('(pointer: coarse)').matches && innerWidth < 760) { $('phone').hidden = false; return; }
+  if (!params.has('nopost')) await post();
   $('boot').hidden = false;
-  $('boot-top').textContent = C.BOOT.top;
+  $('name').focus();
   $('boot-warning').textContent = C.BOOT.warning;
   $('boot-privacy').textContent = C.BOOT.privacy;
   setCalm(player.calm);
@@ -839,11 +933,22 @@ $('btn-download').addEventListener('click', () => {
   $('boot-privacy-file').hidden = false;
 });
 
+// Setup has two steps: name and calm mode, then the optional real-machine haunts.
+function setupStep(n) {
+  $('setup-1').hidden = n !== 1;
+  $('setup-2').hidden = n !== 2;
+  $('setup-back').hidden = n !== 2;
+  $('setup-next').textContent = n === 1 ? 'Next >' : 'Boot';
+  (n === 1 ? $('name') : $('setup-next')).focus();
+}
+$('setup-back').addEventListener('click', () => setupStep(1));
+
 $('boot-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = $('name').value.trim();
-  if (!NAME_OK.test(name)) { $('name-error').hidden = false; return; }
+  if (!NAME_OK.test(name)) { $('name-error').hidden = false; setupStep(1); return; }
   $('name-error').hidden = true;
+  if (!$('setup-1').hidden) { setupStep(2); return; }
   player.name = name;
   $('boot').hidden = true;
   if (!offline) {
@@ -869,6 +974,7 @@ function startGame() {
   $('screen').classList.remove('possessed');
   $('icon-pal').classList.remove('cracked', 'binned');
   $('icon-bin').classList.remove('full');
+  $('icon-note').hidden = true;
   $('blocker').hidden = true;
   $('cursor').hidden = true;
   $('sticky-note').textContent = C.STICKY.note;

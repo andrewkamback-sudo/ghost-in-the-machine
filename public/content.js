@@ -116,6 +116,21 @@ export const DIALOGS = {
   possession: { title: 'Halcyon 95', text: 'ASSISTANT.EXE has caused a General Possession Fault in module PAL.MEM at 0248:0300. Abort, Retry, Exorcise?', buttons: ['Abort', 'Retry', 'Exorcise'] },
 };
 
+export const POST = [
+  { text: 'HALCYON BIOS v4.12   (C) 1997 Halcyon Labs, Inc.', pause: 260 },
+  { text: 'Pentium II 266 MHz', pause: 140 },
+  { text: 'Memory Test: 65536K OK', slow: true, pause: 240 },
+  { text: '', pause: 80 },
+  { text: 'Detecting IDE drives...', pause: 420 },
+  { text: '  Primary Master : HALCYON HD 1.2GB', pause: 160 },
+  { text: '  Primary Slave  : PAL.MEM (11 of 12 passes)', bad: true, pause: 420 },
+  { text: '', pause: 80 },
+  { text: 'Last shutdown    : 02:48 AM (unexpected)', bad: true, pause: 300 },
+  { text: 'Property of Halcyon Labs. Liquidation Lot 117.', pause: 500 },
+  { text: '', pause: 80 },
+  { text: 'Boo...ting from drive C:', slow: true, pause: 600 },
+];
+
 export const BOOT = {
   top: 'Boo...ting from drive C:',
   warning: 'Content warning: horror themes and brief flashing or motion.',

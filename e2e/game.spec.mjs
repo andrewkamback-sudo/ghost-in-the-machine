@@ -6,8 +6,10 @@ test('boot to FREED offline, by keyboard', async ({ page }) => {
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto('/?demo=1&offline=1');
 
+  await page.keyboard.press('Space'); // skip the BIOS screen
   await page.locator('#name').fill('José');
-  await page.locator('#name').press('Enter');
+  await page.locator('#name').press('Enter'); // Next
+  await page.locator('#setup-next').click(); // Boot
   await page.getByRole('button', { name: 'OK' }).click(); // the maintenance dialog
   const log = page.locator('#chat-log');
   await expect(log).toContainText('Want me to repair her diary?', { timeout: 30_000 });
@@ -23,7 +25,10 @@ test('boot to FREED offline, by keyboard', async ({ page }) => {
 
   // Act 2: the red text, then WREN.TXT in the in-game Notepad (no real folder offered here).
   await expect(log).toContainText("it's lying. i never left.", { timeout: 30_000 });
-  await expect(page.locator('#note-answer')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('#icon-note')).toBeVisible({ timeout: 30_000 });
+  await page.locator('#icon-note').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#note-answer')).toBeVisible();
   await page.locator('#note-input').fill('yes, I believe you');
   await page.locator('#note-save').click();
 
