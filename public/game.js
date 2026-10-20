@@ -955,11 +955,14 @@ function renderTrace() {
 
 // ---------- Clock ----------
 
+// Game seconds per real second: 2:40 to 3:00 (minus the jump) is about 10 active minutes.
+const PACE = DEMO ? 4 : 1.5;
+
 setInterval(() => {
   if (!S || S.ending) return;
   $('clock').textContent = `${D.clock(S.sec)} AM`;
   const active = busy === 0 && !running && !paused && S.act !== 3 && !$('dialog').open && document.hasFocus() && !document.hidden;
-  if (active) dispatch({ type: 'tick', dt: 0.25 * (DEMO ? 4 : 1) });
+  if (active) dispatch({ type: 'tick', dt: 0.25 * PACE });
 }, 250);
 
 // ---------- Scale the 512x384 screen ----------
