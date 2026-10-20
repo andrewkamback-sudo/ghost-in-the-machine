@@ -30,13 +30,17 @@ Recount after any edit: `node -e "console.log(require('fs').readFileSync('SUBMIS
 
 ### Before recording
 
-- [ ] **Chrome**, a clean profile (no bookmarks, extensions or other tabs), in a normal window about 1280×800. Leave room on the right for Wren's window. Don't use fullscreen.
-- [ ] **Clean Mac desktop**, with an empty folder on it called `demo` to pick when she asks for a folder. Delete any `Halcyon 95` folder from earlier takes.
-- [ ] **Notifications:** Focus / Do Not Disturb off; Chrome allowed in System Settings › Notifications.
-- [ ] **Fresh permissions per take:** in the site controls by the address bar, reset Notifications and Camera. Otherwise the browser won't ask again.
+- [ ] **A fresh Brave window per take**, opened with the command below. Each one is a throwaway Brave with no extensions, bookmarks or saved permissions (so every permission prompt appears again), sized 1380×960 so Wren's window fits on the right and the game renders at a crisp 2×. It also turns on the folder feature, which Brave hides by default; without it the game falls back to downloading WREN.TXT. After each take press **Cmd+Q** in that window. Your normal Brave isn't affected.
+
+  ```bash
+  open -na "Brave Browser" --args --user-data-dir="$(mktemp -d)" --no-first-run --no-default-browser-check --enable-features=FileSystemAccessAPI --window-size=1380,960 --window-position=0,0 "https://ghost-in-the-machine-seven.vercel.app/?demo=1"
+  ```
+
+- [ ] **Clean Mac desktop**, with the empty `demo` folder on it to pick when Wren asks for a folder. Between takes, delete the `Halcyon 95` folder the game makes inside it.
+- [ ] **Notifications:** Focus / Do Not Disturb off; **Brave Browser** allowed in System Settings › Notifications.
 - [ ] **Sound:** system volume up. Make a short test recording: on the second setup screen click **Test sound**, and check that the recording has the chime and the buzz (about 2.5 s, then quiet). Some recorders drop system audio.
 - [ ] **Pre-warm the AI:** play one chat turn on the live site a minute before the take.
-- [ ] Open `https://ghost-in-the-machine-seven.vercel.app/?demo=1`.
+- [ ] **Start rolling, then press Cmd+R** in the game window to start from the BIOS screen.
 
 ### Shot list
 
