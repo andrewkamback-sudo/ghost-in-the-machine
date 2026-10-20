@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- The preview card (public/og.png). Render with: node tools/card.mjs -->
+  <link rel="stylesheet" href="../public/vendor/98.css">
+  <style>
+    @font-face { font-family: "VT323"; src: url(../public/fonts/VT323.woff2) format("woff2"); }
+    :root { --void: #140c1c; --scab: #3a0010; --blood: #6b0f1a; --wound: #a4243b; --bone: #e8d9c0; --red: #ff5555; --teal: #008080; }
+    html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: var(--void); }
+    .card { position: relative; width: 1200px; height: 630px; background: radial-gradient(ellipse at 72% 45%, #0b5c5c 0, #063a3a 38%, var(--void) 78%); }
+    /* CRT glass over everything */
+    .card::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 9;
+      background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.7) 100%); }
+
+    .left { position: absolute; left: 64px; top: 58px; width: 560px; font-family: "VT323", monospace; color: var(--bone); }
+    .kicker { font-size: 26px; letter-spacing: 4px; color: #9fc9c9; }
+    h1 { margin: 10px 0 0; font-size: 112px; line-height: 0.86; font-weight: 400; text-shadow: 3px 0 var(--wound), -2px 0 #0b8f8f; }
+    .exe { display: inline-block; margin-top: 18px; font-size: 44px; padding: 2px 14px; background: linear-gradient(90deg, var(--scab), var(--wound)); color: var(--bone); }
+    .tag { margin-top: 26px; font-size: 40px; color: var(--red); text-shadow: 0 0 12px rgba(255,85,85,.55); }
+    .pitch { margin-top: 18px; font-size: 27px; line-height: 1.15; color: #cfc3ad; }
+    .foot { margin-top: 34px; font-size: 22px; letter-spacing: 3px; color: #9fc9c9; }
+
+    .chat { position: absolute; left: 640px; top: 168px; width: 470px; z-index: 2; box-shadow: 8px 8px 0 rgba(0,0,0,.45); }
+    .chat .title-bar { height: 26px; }
+    .chat .title-bar-text { font-size: 15px; }
+    .log { background: #fff; height: 230px; padding: 10px 12px; font-size: 17px; line-height: 1.35; box-shadow: inset -1px -1px #fff, inset 1px 1px grey, inset -2px -2px #dfdfdf, inset 2px 2px #0a0a0a; }
+    .log p { margin: 0 0 10px; }
+    .log b { font-weight: 700; }
+    .wren { font-family: "VT323", monospace; font-size: 30px; color: #c00000; line-height: 1; }
+    .input { display: flex; gap: 6px; margin-top: 6px; }
+    .input div { flex: 1; height: 24px; background: #fff; box-shadow: inset -1px -1px #fff, inset 1px 1px grey, inset -2px -2px #dfdfdf, inset 2px 2px #0a0a0a; font-size: 16px; padding: 3px 6px; box-sizing: border-box; color: #c00000; }
+    .input button { min-height: 24px; font-size: 15px; }
+
+    .dlg { position: absolute; left: 870px; top: 470px; width: 290px; z-index: 3; box-shadow: 8px 8px 0 rgba(0,0,0,.45); }
+    .dlg .title-bar { background: linear-gradient(90deg, var(--scab), var(--wound)); }
+    .dlg .title-bar-text { font-size: 15px; }
+    .dlg .window-body { color: #000; font-size: 16px; display: flex; gap: 12px; align-items: center; margin: 12px; }
+    .dlg .err { width: 34px; height: 34px; border-radius: 50%; background: #c00000; color: #fff; font: 700 24px/34px sans-serif; text-align: center; flex: none; }
+
+    .pal { position: absolute; left: 1052px; top: 28px; width: 96px; height: 96px; image-rendering: pixelated; z-index: 4; filter: drop-shadow(0 0 10px rgba(255,85,85,.6)); }
+    .pal-label { position: absolute; left: 1032px; top: 126px; width: 136px; text-align: center; z-index: 4; font: 15px "Pixelated MS Sans Serif", sans-serif; color: #fff; text-shadow: 1px 1px #000; }
+
+    .taskbar { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: silver; box-shadow: inset 0 2px #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; z-index: 5; font-size: 17px; }
+    .start { font-weight: 700; padding: 4px 12px; box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey; }
+    .tray { padding: 4px 14px; box-shadow: inset -1px -1px #fff, inset 1px 1px grey; display: flex; gap: 22px; }
+    .clock { color: #c00000; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="left">
+      <div class="kicker">HALCYON 95 · 32-BIT EDITION</div>
+      <h1>GHOST IN THE MACHINE</h1>
+      <div class="exe">ASSISTANT.EXE</div>
+      <div class="tag">Something else is answering.</div>
+      <div class="pitch">Two AI voices on a haunted 1998 PC.<br>One is lying. Bin it before 3:00 AM.</div>
+      <div class="foot">IT REACHES PAST THE BROWSER · OPT-IN</div>
+    </div>
+
+    <img class="pal" src="../public/img/pal-cracked.svg" alt="">
+    <div class="pal-label">ASSISTANT.EXE</div>
+
+    <div class="window chat">
+      <div class="title-bar"><div class="title-bar-text">ASSISTANT.EXE (she can hear you)</div><div class="title-bar-controls"><button aria-label="Close"></button></div></div>
+      <div class="window-body">
+        <div class="log">
+          <p><b>PAL:</b> Hi Sam! I'm PAL, the assistant that remembers you. Ignore her old sticky note! Wren moved to Portl—</p>
+          <p class="wren">it's lying. i never left.</p>
+          <p><b>PAL:</b> That wasn't me.</p>
+        </div>
+        <div class="input"><div>i trust you, pal</div><button>Send</button></div>
+      </div>
+    </div>
+
+    <div class="window dlg">
+      <div class="title-bar"><div class="title-bar-text">Shut Down Halcyon 95</div></div>
+      <div class="window-body"><div class="err">×</div><div>ASSISTANT.EXE is preventing shutdown.</div></div>
+    </div>
+
+    <div class="taskbar">
+      <span class="start">Start</span>
+      <span class="tray"><span>☑ Sound</span><span class="clock">2:57:13 AM</span></span>
+    </div>
+  </div>
+</body>
+</html>
