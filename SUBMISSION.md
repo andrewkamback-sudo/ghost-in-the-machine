@@ -34,7 +34,7 @@ Recount after any edit: `node -e "console.log(require('fs').readFileSync('SUBMIS
 - [ ] **Clean Mac desktop**, with an empty folder on it called `demo` to pick when she asks for a folder. Delete any `Halcyon 95` folder from earlier takes.
 - [ ] **Notifications:** Focus / Do Not Disturb off; Chrome allowed in System Settings › Notifications.
 - [ ] **Fresh permissions per take:** in the site controls by the address bar, reset Notifications and Camera. Otherwise the browser won't ask again.
-- [ ] **Sound:** system volume up. Make a 10-second test recording and check that the startup chime is in it, because some recorders drop system audio.
+- [ ] **Sound:** system volume up. Make a short test recording: on the second setup screen click **Test sound**, and check that the recording has the chime and the buzz (about 2.5 s, then quiet). Some recorders drop system audio.
 - [ ] **Pre-warm the AI:** play one chat turn on the live site a minute before the take.
 - [ ] Open `https://ghost-in-the-machine-seven.vercel.app/?demo=1`.
 
@@ -42,9 +42,9 @@ Recount after any edit: `node -e "console.log(require('fs').readFileSync('SUBMIS
 
 | Time | On screen | Why it matters |
 |---|---|---|
-| 0:00 | BIOS screen, boot, startup chime. Caption: *"An AI assistant on a haunted 1998 PC. Two voices. One is lying."* | Hook |
-| 0:10 | Setup: type your name, click **Test sound**. Caption: *"Everything that leaves the browser is opt-in."* | Harmless and opt-in |
-| 0:20 | Desktop: PAL's greeting, the sticky note, DEFRAG eating red sectors. Ask "who is Wren?", say **yes** to the diary repair, then click **Allow voice** when PAL asks. | Premise; PAL talking out loud |
+| 0:00 | BIOS screen (silent), then the setup wizard. Caption: *"An AI assistant on a haunted 1998 PC. Two voices. One is lying."* | Hook |
+| 0:10 | Setup: type your name, then click **Test sound** once: a chime and a buzz for about 2.5 s, then quiet. The button reads **Stop** while it plays; don't click it again unless you want to cut it short. You can click **Boot** straight away without losing sound. Caption: *"Everything that leaves the browser is opt-in."* | Harmless and opt-in; shows the sound works |
+| 0:20 | Desktop: the startup chime, PAL's greeting, the sticky note, DEFRAG eating red sectors. Ask "who is Wren?", say **yes** to the diary repair, then click **Allow voice** when PAL asks. | Premise; PAL talking out loud |
 | 0:40 | Open C:\WREN: the diary repairs. Red text cuts in: *"it's lying. i never left."* PAL: *"That wasn't me."* | The two agents clash |
 | 0:50 | Allow notifications, then pick the `demo` folder when Wren asks. Switch to **Finder**: the Halcyon 95 folder and WREN.TXT appear. | A real file on your disk |
 | 1:05 | Open WREN.TXT in TextEdit, type an answer after the arrow, save. Stay in TextEdit: a **macOS notification** from PAL arrives, *"Did you just save something? I heard the disk spin."* Back in the game, Wren has replied. | It reads your real file back; a real notification |
