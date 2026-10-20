@@ -948,7 +948,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 function renderTrace() {
-  $('trace').textContent = JSON.stringify({ act: S?.act, clock: S && D.clock(S.sec), clues: S?.clues, offline, breaker: S?.breaker, llmTurns: S?.llmTurns, lastTurn: lastTrace }, null, 2);
+  $('trace').textContent = JSON.stringify({ audio: A.debug(), act: S?.act, clock: S && D.clock(S.sec), clues: S?.clues, offline, breaker: S?.breaker, llmTurns: S?.llmTurns, lastTurn: lastTrace }, null, 2);
 }
 
 // ---------- Clock ----------
@@ -1177,6 +1177,7 @@ function startGame() {
 
 // The maintenance dialog opens the desktop; PAL greets after it closes.
 async function greet() {
+  A.startup();
   await ask('maintenance');
   dispatch({ type: 'start' });
   $('chat-input').focus();

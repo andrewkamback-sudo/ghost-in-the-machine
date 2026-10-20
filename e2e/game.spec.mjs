@@ -71,3 +71,20 @@ test('boot to FREED offline, by keyboard', async ({ page }) => {
   stop();
   expect(errors).toEqual([]);
 });
+
+test('sound: audio is running and audible after boot, and Sound off silences it', async ({ page }) => {
+  await page.goto('/?offline=1&nopost=1');
+  await page.locator('#name').fill('Sam');
+  await page.locator('#name').press('Enter');
+  await page.locator('#setup-next').click(); // the Boot click starts audio
+  await page.waitForTimeout(1500);
+  const on = await page.evaluate(async () => (await import('/sfx.js')).debug());
+  expect(on.state).toBe('running');
+  expect(on.rms).toBeGreaterThan(0.005);
+  await page.getByRole('button', { name: 'OK', exact: true }).click();
+  await page.locator('label[for=sound-tray]').click();
+  await page.waitForTimeout(800);
+  const off = await page.evaluate(async () => (await import('/sfx.js')).debug());
+  expect(off.muted).toBe(true);
+  expect(off.rms).toBeLessThan(0.002);
+});

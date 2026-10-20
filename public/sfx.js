@@ -10,7 +10,9 @@ let dread = 0;
 let beatTimer = null;
 let noise = null;
 
-const HUM = [0.012, 0.02, 0.03, 0.042, 0.055, 0.07];
+// Levels are tuned for laptop speakers, which can't play much below ~150 Hz.
+const HUM = [0.05, 0.07, 0.09, 0.11, 0.13, 0.16];
+let analyser = null;
 const BEAT_MS = [0, 0, 1500, 1150, 900, 700];
 
 // Call from a click (the boot button): browsers start audio only after a gesture.
@@ -21,7 +23,13 @@ export function unlock() {
   ctx = new AC();
   master = ctx.createGain();
   master.gain.value = muted ? 0 : 1;
-  master.connect(ctx.destination);
+  analyser = ctx.createAnalyser();
+  analyser.fftSize = 2048;
+  master.connect(analyser).connect(ctx.destination);
+  // Some browsers start the context suspended; any later click or key wakes it.
+  const wake = () => { if (ctx.state !== 'running') ctx.resume(); };
+  addEventListener('pointerdown', wake);
+  addEventListener('keydown', wake);
   noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
   const d = noise.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -32,7 +40,7 @@ function startHum() {
   humGain = ctx.createGain();
   humGain.gain.value = HUM[0];
   humGain.connect(master);
-  for (const [f, g] of [[60, 1], [120, 0.5], [180, 0.15]]) {
+  for (const [f, g] of [[60, 0.6], [120, 0.5], [180, 0.35], [240, 0.25], [300, 0.12], [420, 0.06]]) {
     const o = ctx.createOscillator();
     const og = ctx.createGain();
     o.frequency.value = f;
@@ -45,10 +53,10 @@ function startHum() {
   n.loop = true;
   const bp = ctx.createBiquadFilter();
   bp.type = 'bandpass';
-  bp.frequency.value = 7800;
-  bp.Q.value = 6;
+  bp.frequency.value = 3200;
+  bp.Q.value = 1.2;
   const ng = ctx.createGain();
-  ng.gain.value = 0.18;
+  ng.gain.value = 0.35;
   n.connect(bp).connect(ng).connect(humGain);
   n.start();
 }
@@ -62,22 +70,26 @@ export function setDread(level) {
 }
 
 function thump(at, gain) {
-  const o = ctx.createOscillator();
   const g = ctx.createGain();
-  o.frequency.setValueAtTime(70, at);
-  o.frequency.exponentialRampToValueAtTime(38, at + 0.18);
   g.gain.setValueAtTime(0.0001, at);
-  g.gain.exponentialRampToValueAtTime(gain, at + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
-  o.connect(g).connect(master);
-  o.start(at);
-  o.stop(at + 0.25);
+  g.gain.exponentialRampToValueAtTime(gain, at + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + 0.24);
+  g.connect(master);
+  for (const [f0, f1, type] of [[90, 50, 'sine'], [180, 100, 'triangle'], [270, 150, 'sine']]) {
+    const o = ctx.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, at);
+    o.frequency.exponentialRampToValueAtTime(f1, at + 0.2);
+    o.connect(g);
+    o.start(at);
+    o.stop(at + 0.26);
+  }
 }
 
 function heartbeat() {
   if (!ctx || muted) return;
   const t = ctx.currentTime;
-  const g = 0.18 + dread * 0.06;
+  const g = 0.35 + dread * 0.08;
   thump(t, g);
   thump(t + 0.18, g * 0.7);
 }
@@ -91,7 +103,7 @@ export function staticBurst(seconds = 0.6, gain = 0.12) {
   hp.type = 'highpass';
   hp.frequency.value = 1200;
   const g = ctx.createGain();
-  g.gain.setValueAtTime(gain, t);
+  g.gain.setValueAtTime(gain * 1.6, t);
   g.gain.linearRampToValueAtTime(0, t + seconds);
   n.connect(hp).connect(g).connect(master);
   n.start(t, Math.random());
@@ -104,11 +116,11 @@ export function sting(level = 1) {
   const t = ctx.currentTime;
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.05 + level * 0.03, t + 0.6);
+  g.gain.exponentialRampToValueAtTime(0.12 + level * 0.05, t + 0.6);
   g.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
   const lp = ctx.createBiquadFilter();
   lp.type = 'lowpass';
-  lp.frequency.value = 1400;
+  lp.frequency.value = 2200;
   g.connect(lp).connect(master);
   for (const f of [110, 116.5, 164.8, 233]) {
     const o = ctx.createOscillator();
@@ -134,10 +146,25 @@ function blip(freq, dur, gain, type = 'square') {
   o.stop(t + dur + 0.01);
 }
 
-export const click = () => blip(1800, 0.025, 0.04);
-export const tick = () => blip(2600 + Math.random() * 600, 0.012, 0.012);
-export const errorBeep = () => { blip(440, 0.12, 0.05, 'square'); setTimeout(() => blip(330, 0.18, 0.05, 'square'), 130); };
-export const chime = () => { blip(880, 0.15, 0.04, 'sine'); setTimeout(() => blip(1320, 0.25, 0.035, 'sine'), 120); };
+export const click = () => blip(1800, 0.03, 0.08);
+export const tick = () => blip(2400 + Math.random() * 600, 0.015, 0.035);
+export const errorBeep = () => { blip(440, 0.12, 0.12, 'square'); setTimeout(() => blip(330, 0.18, 0.12, 'square'), 130); };
+export const chime = () => { blip(880, 0.15, 0.1, 'sine'); setTimeout(() => blip(1320, 0.25, 0.09, 'sine'), 120); };
+
+// A Halcyon 95 startup sound when the desktop appears, so players know sound is on.
+export function startup() {
+  if (!ctx) return;
+  [[523, 0], [659, 0.18], [784, 0.36], [1046, 0.6]].forEach(([f, d]) => setTimeout(() => blip(f, 0.5, 0.09, 'triangle'), d * 1000));
+}
+
+// For the ~ trace and the tests: is audio running, and how loud is it right now?
+export function debug() {
+  if (!analyser) return { state: 'none', rms: 0 };
+  const buf = new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(buf);
+  const rms = Math.sqrt(buf.reduce((a, x) => a + x * x, 0) / buf.length);
+  return { state: ctx.state, muted, dread, rms: Math.round(rms * 1000) / 1000 };
+}
 
 export function setMuted(on) {
   muted = on;
