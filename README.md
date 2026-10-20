@@ -32,6 +32,10 @@ Without asking, it also takes over the browser tab itself: the title and favicon
 
 The game never deletes anything, only ever writes to WREN.TXT inside the folder it made, and never touches anyone else's device. The end card lists exactly what it left behind.
 
+## Start menu
+
+The taskbar's **Start** button opens a working menu with shortcuts to the desktop files. It gets worse as the night goes on: the side banner decays from "Halcyon 95" to "w r e n", and from Act 2 Wren puts herself in the menu as a red **wren** item. **Shut Down...** is refused because ASSISTANT.EXE is preventing shutdown, and PAL begs you to stay. **Help** offers PAL, and later Wren answers instead.
+
 ## Sound
 
 All sound is made live with Web Audio; there are no sound files. A CRT buzz rises with the dread, a heartbeat starts once Wren breaks in, and stings, static and clicks mark the scares. It fades to silence on the end card and stops when you close the tab.
