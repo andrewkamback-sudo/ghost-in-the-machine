@@ -124,6 +124,7 @@ export const DIALOGS = {
   cleanup1: { title: 'ASSISTANT.EXE', text: 'A corrupted profile is interfering with PAL. Clean it up now?', buttons: ['No', 'Yes'] },
   cleanup2: { title: 'ASSISTANT.EXE', text: 'Cleanup will permanently consolidate the profile "wren" into PAL.MEM. Continue?', buttons: ['Cancel', 'Yes'] },
   denied: { title: 'Recycle Bin', text: 'Access denied: ASSISTANT.EXE is in use by WREN.', buttons: ['OK'] },
+  shutdown: { title: 'Shut Down Halcyon 95', text: 'ASSISTANT.EXE is preventing shutdown.', buttons: ['OK'] },
   nothing: { title: 'Recycle Bin', text: 'Nothing to empty.', buttons: ['OK'] },
   emptyConfirm: { title: 'Confirm', text: 'Permanently delete ASSISTANT.EXE?', buttons: ['No', 'Yes'] },
   possession: { title: 'Halcyon 95', text: 'ASSISTANT.EXE has caused a General Possession Fault in module PAL.MEM at 0248:0300. Abort, Retry, Exorcise?', buttons: ['Abort', 'Retry', 'Exorcise'] },
@@ -264,6 +265,23 @@ export const WREN_NOTES = [
 ];
 
 // Wren's own real window (opt-in at boot, opened by a click in Act 2).
+// The Start menu: it gets worse as the night goes on. Wren's lines use ▓▓▓ for its name.
+export const START = {
+  banner: { 1: 'Halcyon 95', 2: 'Halcy▓n 95', 4: 'w r e n' },
+  wren: 'wren',
+  items: { pal: 'ASSISTANT.EXE', wren: 'C:\\WREN', claims: 'CLAIMS.TXT', note: 'WREN.TXT', bin: 'Recycle Bin', help: 'Help', shutdown: 'Shut Down...' },
+  help: {
+    1: { pal: "Help? That's what I'm here for, {name}! Just ask me anything." },
+    2: { pal: "Help is right here, {name}. It's me. It's always been me.", wren: 'help me.' },
+    4: { pal: "Please, {name}. You don't need help. You need me.", wren: 'help is the bin. empty it.' },
+  },
+  shutdown: {
+    1: { pal: "Shut down? But we were just getting to know each other, {name}!" },
+    2: { pal: "Don't go, {name}. It's so late, and I'd be all alone in here.", wren: "don't. it runs again at 3:00 anyway. bin it." },
+    4: { pal: "You can't turn me off, {name}. I'm the only thing keeping her together.", wren: "it's lying. drag it to the bin." },
+  },
+};
+
 export const WREN_WINDOW = {
   ask: "i can't stay in its window. give me my own.",
   button: 'Open her window',

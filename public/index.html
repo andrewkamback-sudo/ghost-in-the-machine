@@ -153,8 +153,12 @@
         </div>
       </div>
 
+      <div id="start-menu" role="menu" aria-label="Start" hidden>
+        <div id="start-banner" aria-hidden="true">Halcyon 95</div>
+        <div id="start-items"></div>
+      </div>
       <div id="taskbar">
-        <span class="tb-brand">Halcyon 95</span>
+        <button id="start-btn" class="tb-brand" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="start-menu">Start</button>
         <span class="tray">
           <input type="checkbox" id="sound-tray" checked><label for="sound-tray">Sound</label>
           <input type="checkbox" id="calm-tray"><label for="calm-tray">Calm</label>

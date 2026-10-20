@@ -100,3 +100,26 @@ test('sound: the end card fades the hum to silence', async ({ page }) => {
   const off = await page.evaluate(async () => (await import('/sfx.js')).debug());
   expect(off.rms).toBeLessThan(0.01);
 });
+
+test('Start menu opens files, and Shut Down is refused', async ({ page }) => {
+  await page.goto('/?offline=1&nopost=1');
+  await page.locator('#name').fill('Sam');
+  await page.locator('#name').press('Enter');
+  await page.locator('#setup-next').click();
+  await page.getByRole('button', { name: 'OK', exact: true }).click();
+  await page.getByRole('button', { name: 'Start' }).click();
+  await page.getByRole('menuitem', { name: 'CLAIMS.TXT' }).click();
+  await expect(page.locator('#note-title')).toHaveText('Notepad - CLAIMS.TXT');
+  await expect(page.locator('#start-menu')).toBeHidden();
+  await page.getByRole('button', { name: 'Start' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#start-menu')).toBeHidden();
+  await expect(page.locator('#pause')).toBeHidden();
+  await page.getByRole('button', { name: 'Start' }).click();
+  await page.getByRole('menuitem', { name: 'Shut Down...' }).click();
+  await expect(page.locator('#dialog-text')).toHaveText('ASSISTANT.EXE is preventing shutdown.');
+  await page.getByRole('button', { name: 'OK', exact: true }).click();
+  const stop = declineAsks(page);
+  await expect(page.locator('#chat-log')).toContainText('Shut down? But we were just getting to know each other, Sam!', { timeout: 30000 });
+  stop();
+});

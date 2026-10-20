@@ -117,6 +117,18 @@ img, canvas { image-rendering: pixelated; }
 /* Possessed: the desktop goes to the corruption palette; chat and Notepad keep contrast. */
 .possessed #taskbar { background: var(--scab); color: var(--bone); }
 .possessed .tb-brand, .possessed .tray { color: var(--bone); }
+.tb-brand { min-width: 0; min-height: 0; background: silver; font: inherit; font-weight: 700; color: inherit; }
+.tb-brand[aria-expanded="true"] { box-shadow: inset 1px 1px #0a0a0a, inset -1px -1px #fff; }
+.possessed .tb-brand { background: var(--scab); }
+#start-menu { position: absolute; left: 2px; bottom: 26px; z-index: 6; display: flex; background: silver; box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey; padding: 3px; }
+#start-banner { writing-mode: vertical-rl; transform: rotate(180deg); background: linear-gradient(navy, #1084d0); color: silver; font-weight: 700; font-size: 14px; padding: 6px 2px; }
+#start-items { display: flex; flex-direction: column; min-width: 120px; }
+#start-items button { all: unset; display: block; padding: 4px 10px 4px 8px; cursor: default; }
+#start-items button:hover, #start-items button:focus { background: navy; color: #fff; }
+#start-items button.red { color: var(--wren-light); font-family: "VT323", monospace; font-size: 16px; }
+#start-items button.red:hover, #start-items button.red:focus { background: var(--wren-light); color: #fff; }
+#start-items hr { border: 0; border-top: 1px solid grey; border-bottom: 1px solid #fff; margin: 3px 2px; width: auto; }
+.possessed #start-banner { background: linear-gradient(var(--scab), var(--wound)); color: var(--bone); }
 .possessed .title-bar { background: linear-gradient(90deg, var(--scab), var(--wound)); }
 .possessed #sticky { background: var(--bone); }
 .possessed #sticky li:last-child { color: var(--wren-light); }

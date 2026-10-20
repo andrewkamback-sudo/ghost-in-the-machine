@@ -729,6 +729,7 @@ async function moveCursor(to, ms) {
 
 async function possession(quote) {
   busy++;
+  startOpen(false);
   clearInterval(pollTimer);
   $('dialog').open && $('dialog').close();
   $('blocker').hidden = false;
@@ -939,6 +940,63 @@ function pause(reason, text = '') {
 }
 $('pause-resume').addEventListener('click', () => { paused = false; $('pause').hidden = true; });
 $('pause-quit').addEventListener('click', () => location.reload());
+
+// ---------- Start menu ----------
+
+const startBtn = $('start-btn');
+const startMenu = $('start-menu');
+const startSaid = new Set(); // each Help / Shut Down line plays once per act
+
+function startOpen(open) {
+  if (open && (!S || S.ending || S.act === 3)) return;
+  startMenu.hidden = !open;
+  startBtn.setAttribute('aria-expanded', String(open));
+  if (!open) return;
+  A.click();
+  const act = S.act >= 4 ? 4 : S.act;
+  $('start-banner').textContent = C.START.banner[act];
+  const items = $('start-items');
+  items.replaceChildren();
+  const add = (label, fn, cls) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'menuitem');
+    b.textContent = label;
+    if (cls) b.className = cls;
+    b.addEventListener('click', () => { startOpen(false); fn(); });
+    items.append(b);
+  };
+  // From Act 2 she has put herself in the menu.
+  if (act >= 2) add(C.START.wren, () => { A.staticBurst(0.3, 0.08); openIcon('wren'); }, 'red');
+  for (const id of ['pal', 'wren', 'claims', 'note', 'bin']) {
+    if (id === 'note' && $('icon-note').hidden) continue;
+    add(C.START.items[id], () => openIcon(id));
+  }
+  items.append(document.createElement('hr'));
+  add(C.START.items.help, () => startLines('help', act));
+  add(C.START.items.shutdown, async () => { await ask('shutdown'); startLines('shutdown', act); });
+  items.querySelector('button').focus();
+}
+
+function startLines(kind, act) {
+  const key = `${kind}${act}`;
+  if (startSaid.has(key)) return;
+  startSaid.add(key);
+  const l = C.START[kind][act];
+  queue.push({ t: 'pal', text: C.fill(l.pal, vars()) });
+  if (l.wren) queue.push({ t: 'wren', text: l.wren });
+  winOpen('win-chat');
+  if (!running) drain();
+}
+
+startBtn.addEventListener('click', () => startOpen(startMenu.hidden));
+startMenu.addEventListener('keydown', (e) => {
+  const bs = [...startMenu.querySelectorAll('button')];
+  const i = bs.indexOf(document.activeElement);
+  if (e.key === 'Escape') { e.stopPropagation(); startOpen(false); startBtn.focus(); }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); bs[(i + (e.key === 'ArrowDown' ? 1 : bs.length - 1)) % bs.length].focus(); }
+});
+document.addEventListener('pointerdown', (e) => { if (!startMenu.hidden && !startMenu.contains(e.target) && e.target !== startBtn) startOpen(false); });
 
 // ---------- Keyboard ----------
 
@@ -1164,6 +1222,8 @@ function startGame() {
   $('icon-bin').classList.remove('full');
   $('icon-note').hidden = true;
   asked.clear();
+  startSaid.clear();
+  startOpen(false);
   if (notifyOn) asked.add('notify');
   if (fileMode !== 'notepad') asked.add('file');
   A.setDread(1);
