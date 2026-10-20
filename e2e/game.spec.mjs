@@ -88,3 +88,15 @@ test('sound: audio is running and audible after boot, and Sound off silences it'
   expect(off.muted).toBe(true);
   expect(off.rms).toBeLessThan(0.002);
 });
+
+test('sound: the end card fades the hum to silence', async ({ page }) => {
+  await page.goto('/?offline=1&nopost=1');
+  await page.locator('#name').fill('Sam');
+  await page.locator('#name').press('Enter');
+  await page.locator('#setup-next').click();
+  await page.waitForTimeout(1000);
+  await page.evaluate(async () => (await import('/sfx.js')).fadeOut(0.4));
+  await page.waitForTimeout(1500);
+  const off = await page.evaluate(async () => (await import('/sfx.js')).debug());
+  expect(off.rms).toBeLessThan(0.01);
+});

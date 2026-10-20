@@ -82,6 +82,17 @@ export function setDread(level) {
   if (BEAT_MS[dread]) beatTimer = setInterval(heartbeat, BEAT_MS[dread]);
 }
 
+// The end card and closing the tab: hum and heartbeat fade out; Boot again's setDread brings them back.
+export function fadeOut(seconds = 2) {
+  clearInterval(beatTimer);
+  if (ctx) humGain.gain.setTargetAtTime(0, ctx.currentTime, seconds / 4);
+}
+// Speech can outlive a closed tab, so cancel it; a page kept in the back/forward cache only pauses.
+addEventListener('pagehide', (e) => {
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  if (ctx) e.persisted ? ctx.suspend() : ctx.close();
+});
+
 function thump(at, gain) {
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.0001, at);

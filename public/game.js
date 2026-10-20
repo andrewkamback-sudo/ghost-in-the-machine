@@ -867,6 +867,7 @@ function para(text, cls) {
 }
 
 function endCard(kind) {
+  A.fadeOut();
   const e = C.ENDINGS[kind];
   const v = vars();
   const end = $('end');
