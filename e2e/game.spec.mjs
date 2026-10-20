@@ -123,3 +123,38 @@ test('Start menu opens files, and Shut Down is refused', async ({ page }) => {
   await expect(page.locator('#chat-log')).toContainText('Shut down? But we were just getting to know each other, Sam!', { timeout: 30000 });
   stop();
 });
+
+test('Test sound lasts about 2.5 s, a second click stops it, and the hum still starts at boot', async ({ page }) => {
+  const rms = async () => (await page.evaluate(async () => (await import('/sfx.js')).debug())).rms;
+  await page.goto('/?offline=1&nopost=1');
+  await page.locator('#name').fill('Sam');
+  await page.locator('#name').press('Enter');
+  const btn = page.locator('#btn-sound');
+  await btn.click();
+  await expect(btn).toHaveText('Stop');
+  await page.waitForTimeout(800);
+  expect(await rms()).toBeGreaterThan(0.005);
+  await expect(btn).toHaveText('Test sound', { timeout: 4000 }); // ends by itself
+  await page.waitForTimeout(1200);
+  expect(await rms()).toBeLessThan(0.002);
+  await btn.click();
+  await page.waitForTimeout(500);
+  await btn.click(); // stop early
+  await expect(btn).toHaveText('Test sound');
+  await page.waitForTimeout(800);
+  expect(await rms()).toBeLessThan(0.002);
+  await page.locator('#setup-next').click();
+  await page.waitForTimeout(2500);
+  expect(await rms()).toBeGreaterThan(0.005);
+});
+
+test('booting while Test sound is still playing keeps the game hum on', async ({ page }) => {
+  await page.goto('/?offline=1&nopost=1');
+  await page.locator('#name').fill('Sam');
+  await page.locator('#name').press('Enter');
+  await page.locator('#btn-sound').click();
+  await page.locator('#setup-next').click();
+  await page.waitForTimeout(4000); // past the 2.5 s test
+  const a = await page.evaluate(async () => (await import('/sfx.js')).debug());
+  expect(a.rms).toBeGreaterThan(0.005);
+});

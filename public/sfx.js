@@ -176,6 +176,14 @@ export const tick = () => blip(2400 + Math.random() * 600, 0.015, 0.035);
 export const errorBeep = () => { blip(440, 0.12, 0.12, 'square'); setTimeout(() => blip(330, 0.18, 0.12, 'square'), 130); };
 export const chime = () => { blip(880, 0.15, 0.1, 'sine'); setTimeout(() => blip(1320, 0.25, 0.09, 'sine'), 120); };
 
+// The boot screen's Test sound: the chime over the buzz, straight away. fadeOut() ends it.
+export function test() {
+  unlock();
+  if (!ctx) return;
+  humGain.gain.setTargetAtTime(HUM[1], ctx.currentTime, 0.05);
+  chime();
+}
+
 // A Halcyon 95 startup sound when the desktop appears, so players know sound is on.
 export function startup() {
   if (!ctx) return;

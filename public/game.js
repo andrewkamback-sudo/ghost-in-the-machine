@@ -1250,7 +1250,20 @@ function setStatus(id, status) {
   el.classList.toggle('on', status === 'on');
 }
 
-$('btn-sound').addEventListener('click', () => { A.unlock(); A.chime(); });
+// Test sound plays for 2.5 s, and a second click stops it sooner. The game's own hum starts at boot.
+let soundTest = null;
+function endSoundTest(fade) {
+  clearTimeout(soundTest);
+  soundTest = null;
+  $('btn-sound').textContent = 'Test sound';
+  if (fade) A.fadeOut(fade);
+}
+$('btn-sound').addEventListener('click', () => {
+  if (soundTest) return endSoundTest(0.2);
+  A.test();
+  $('btn-sound').textContent = 'Stop';
+  soundTest = setTimeout(() => endSoundTest(0.4), 2500);
+});
 $('btn-notify').addEventListener('click', () => {
   H.askNotify((st) => { notifyOn = st === 'on'; setStatus('st-notify', st); });
 });
@@ -1296,6 +1309,7 @@ $('boot-form').addEventListener('submit', async (e) => {
   $('name-error').hidden = true;
   if (!$('setup-1').hidden) { setupStep(2); return; }
   player.name = name;
+  endSoundTest(0); // booting mid-test keeps the sound on
   A.unlock();
   $('boot').hidden = true;
   if (!offline) {
