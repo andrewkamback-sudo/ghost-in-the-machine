@@ -76,6 +76,9 @@ async function run(c) {
     case 'voice': return void A.speak(c.who, c.text);
     case 'ask': return askHaunt(c.id);
     case 'hint': return pulse(c.target);
+    case 'page': return showPage(c.n);
+    case 'fakewren': return say('wren', c.text, { history: false, fake: true });
+    case 'flash': return flashFrames(c);
     case 'file_note': return fileNote(c.n);
     case 'window_drift': return void H.wrenWindowDrift({ calm: player.calm, small: c.small });
     case 'wren_window': return void H.wrenWindowSay(c.text);
@@ -146,7 +149,7 @@ async function typeInto(el, text, { cps = 40, cut = null, stutter = false } = {}
   return span;
 }
 
-async function say(who, text, { cut = null, quote = null, history = true } = {}) {
+async function say(who, text, { cut = null, quote = null, history = true, fake = false } = {}) {
   if (who === 'pal') {
     const p = line('pal', 'PAL');
     A.speak('pal', cut != null ? text.slice(0, cut) : text);
@@ -156,6 +159,7 @@ async function say(who, text, { cut = null, quote = null, history = true } = {})
     if (cut == null) await sleep(300 / SPEED);
   } else if (who === 'wren') {
     const p = line('wren');
+    if (!fake) defragBack = 14; // only the real Wren can push DEFRAG back
     A.speak('wren', text.replace(/▓+/g, 'pal'));
     // Once she has her own window she talks there; the chat only points at it.
     if (H.hasWrenWindow()) { H.wrenWindowSay(text); A.staticBurst(0.25, 0.08); p.textContent = C.WREN_WINDOW.pointer; }
@@ -391,6 +395,7 @@ async function dialogFor(id) {
   if (id === 'cleanup1') dispatch({ type: 'cleanup', answer: answer === 'Yes' ? 'yes1' : 'no' });
   if (id === 'cleanup2') dispatch({ type: 'cleanup', answer: answer === 'Yes' ? 'yes2' : 'no' });
   if (id === 'emptyConfirm') dispatch({ type: 'empty_confirm', yes: answer === 'Yes' });
+  if (id === 'quarantine') dispatch({ type: 'quarantine', yes: answer === 'Quarantine' });
 }
 
 // ---------- WREN.TXT: the file beat, the answer, the reply ----------
@@ -941,6 +946,100 @@ function pause(reason, text = '') {
 $('pause-resume').addEventListener('click', () => { paused = false; $('pause').hidden = true; });
 $('pause-quit').addEventListener('click', () => location.reload());
 
+// ---------- Lost diary pages ----------
+
+const PAGE_AT = [[382, 156], [446, 160], [386, 208], [448, 212], [2, 238]]; // free desktop spots
+
+function showPage(n) {
+  const pg = C.PAGES[n - 1];
+  const icon = document.createElement('div');
+  icon.className = 'icon appear';
+  icon.id = `icon-page${n}`;
+  icon.setAttribute('role', 'button');
+  icon.tabIndex = 0;
+  icon.setAttribute('aria-label', `Torn page, ${pg.file}`);
+  [icon.style.left, icon.style.top] = PAGE_AT[n - 1].map((x) => `${x}px`);
+  const glyph = document.createElement('div');
+  glyph.className = 'glyph g-page';
+  const label = document.createElement('span');
+  label.className = 'label';
+  label.textContent = pg.file.replace('diary_', '');
+  icon.append(glyph, label);
+  const open = () => {
+    if (!S || S.ending || S.act === 3) return;
+    note(pg.file, pg.text, 'page');
+    dispatch({ type: 'open', id: 'page' });
+  };
+  icon.addEventListener('dblclick', open);
+  icon.addEventListener('click', () => icon.focus());
+  icon.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(); });
+  $('pages').append(icon);
+  A.staticBurst(0.35, 0.08);
+  pulse(`page${n}`);
+  announce(`A torn page appeared on the desktop: ${pg.file}`);
+}
+
+// ---------- Flash frames ----------
+
+async function flashFrames({ pal, wren, disguised }) {
+  announce(`Red text flashes: ${wren}`);
+  if (player.calm) {
+    const title = $('chat-title');
+    title.textContent = wren;
+    setTimeout(() => { title.textContent = 'ASSISTANT.EXE'; }, 1800);
+    return;
+  }
+  const f = $('flash');
+  glitch('flicker');
+  A.staticBurst(0.5, 0.12);
+  await sleep(220);
+  for (const [cls, text, ms] of [[disguised ? 'wren' : 'pal', pal, 110], ['wren', wren, 150]]) {
+    f.className = cls;
+    $('flash-text').textContent = text;
+    f.hidden = false;
+    await sleep(ms);
+  }
+  f.hidden = true;
+}
+
+// ---------- DEFRAG.EXE: always moving, eating her sectors ----------
+
+const COLS = 29, ROWS = 8;
+const cells = Array.from({ length: COLS * ROWS }, (_, i) => {
+  const r = ((i * 2654435761) >>> 0) % 100; // fixed pseudo-random layout
+  return r < 16 ? 'free' : r < 30 ? 'sys' : 'data';
+});
+const CELL = { free: null, sys: '#008080', pal: '#000080', wren: '#c00000' };
+let defragBack = 0; // Wren pushes it back for a moment when she speaks
+let head = 0;
+
+function drawDefrag() {
+  const span = D.T.end - D.T.start;
+  const f = Math.min(1, Math.max(0, (S.sec - D.T.start) / span));
+  defragBack = Math.max(0, defragBack - 1);
+  const frontier = Math.floor(cells.length * (0.3 + 0.7 * f)) - defragBack;
+  head = Math.max(0, Math.min(cells.length - 1, frontier + Math.floor(Math.random() * 9) - 4));
+  const g = $('defrag-grid').getContext('2d');
+  g.clearRect(0, 0, 116, 32);
+  cells.forEach((c, i) => {
+    const color = i === head ? '#ffff00' : CELL[c === 'data' ? (i < frontier ? 'pal' : 'wren') : c];
+    if (!color) return;
+    g.fillStyle = color;
+    g.fillRect((i % COLS) * 4, Math.floor(i / COLS) * 4, 3, 3);
+  });
+  const pass12 = S.sec >= D.T.jump;
+  const pct = pass12 ? (S.sec - D.T.jump) / (D.T.end - D.T.jump) : (S.sec - D.T.start) / (D.T.jump - D.T.start);
+  $('defrag-status').textContent = `Pass ${pass12 ? 12 : 11} of 12  ${Math.floor(Math.min(1, pct) * 100)}%\n${C.DEFRAG.moving}`;
+  if (Math.random() < 0.18) A.seek();
+}
+
+$('defrag-title').textContent = C.DEFRAG.title;
+$('defrag-stop').addEventListener('click', async () => {
+  if (!S || S.ending || S.act === 3) return;
+  await ask('defragStop');
+  oneShot('defrag', C.DEFRAG.stop);
+});
+
 // ---------- Start menu ----------
 
 const startBtn = $('start-btn');
@@ -978,11 +1077,12 @@ function startOpen(open) {
   items.querySelector('button').focus();
 }
 
-function startLines(kind, act) {
-  const key = `${kind}${act}`;
+const startLines = (kind, act) => oneShot(`${kind}${act}`, C.START[kind][act]);
+
+// A scripted PAL line (and maybe Wren's answer) that plays once per run.
+function oneShot(key, l) {
   if (startSaid.has(key)) return;
   startSaid.add(key);
-  const l = C.START[kind][act];
   queue.push({ t: 'pal', text: C.fill(l.pal, vars()) });
   if (l.wren) queue.push({ t: 'wren', text: l.wren });
   winOpen('win-chat');
@@ -1020,6 +1120,7 @@ const PACE = DEMO ? 4 : 1.5;
 setInterval(() => {
   if (!S || S.ending) return;
   $('clock').textContent = `${D.clock(S.sec)} AM`;
+  drawDefrag();
   const active = busy === 0 && !running && !paused && S.act !== 3 && !$('dialog').open && document.hasFocus() && !document.hidden;
   if (active) dispatch({ type: 'tick', dt: 0.25 * PACE });
 }, 250);
@@ -1070,6 +1171,7 @@ for (const win of document.querySelectorAll('.win')) {
       const top = Math.max(0, Math.min(384 - 26 - 20, start.top + (ev.clientY - start.y) / z));
       win.style.left = `${left}px`;
       win.style.top = `${top}px`;
+      win.style.right = win.style.bottom = 'auto';
     };
     const up = () => { bar.removeEventListener('pointermove', move); bar.removeEventListener('pointerup', up); };
     bar.addEventListener('pointermove', move);
@@ -1224,6 +1326,8 @@ function startGame() {
   asked.clear();
   startSaid.clear();
   startOpen(false);
+  $('pages').replaceChildren();
+  defragBack = 0;
   if (notifyOn) asked.add('notify');
   if (fileMode !== 'notepad') asked.add('file');
   A.setDread(1);

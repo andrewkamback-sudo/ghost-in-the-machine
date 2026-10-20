@@ -84,6 +84,14 @@ const sprites = {
     t.rect(11, 21, 2, 1, 'r'); t.px(13, 20, 'r'); t.px(13, 22, 'r'); // the arrow ->
     t.rect(15, 21, 1, 1, 'r');
   }),
+  // A torn diary page: ruled lines, red scrawl, a ragged bottom edge.
+  page: sprite((t) => {
+    t.box(8, 4, 16, 22, 'l', 'k');
+    for (const y of [8, 11, 14, 17, 20]) t.rect(10, y, 12, 1, 'g');
+    t.rect(10, 4, 1, 21, 'R');
+    t.line([[12, 9], [15, 10], [18, 9], [20, 10]], 'r'); t.line([[12, 15], [16, 16], [19, 15]], 'r');
+    for (let x = 8; x < 24; x++) { const d = [0, 2, 1, 3, 0, 2, 1, 0][x % 8]; t.rect(x, 25 - d, 1, d + 1, null); t.px(x, 24 - d, 'k'); }
+  }),
 };
 
 function bin(full) {

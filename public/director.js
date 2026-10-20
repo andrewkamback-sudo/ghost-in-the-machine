@@ -1,7 +1,7 @@
 // The Director owns the story: acts, clock, clues, stories, interrupts, endings.
 // Pure: no DOM, no network. reduce(state, event) returns { state, cmds }, and
 // game.js carries out the commands. Tested by test/director.test.js.
-import { STORY, LINES, FALLBACK, HINTS, fill, maskPal } from './content.js';
+import { STORY, LINES, FALLBACK, HINTS, FLASH, fill, maskPal } from './content.js';
 
 const at = (m, s = 0) => 2 * 3600 + m * 60 + s; // 2:mm:ss AM
 export const T = {
@@ -32,6 +32,19 @@ export const TIMELINE = [
   { id: 'a4-away', at: at(57), acts: [4], cmds: [{ t: 'notify', n: 'N4' }, { t: 'glitch', kind: 'static' }] },
   { id: 'a4-two', at: at(58), acts: [4], cmds: [{ t: 'voice', who: 'pal', text: 'Two minutes, {name}.' }, { t: 'dread', level: 5 }] },
   { id: 'a4-now', at: at(59), acts: [4], cmds: [{ t: 'glitch', kind: 'static' }, { t: 'glitch', kind: 'flicker' }] },
+  // PAL writes as Wren; she calls it out. The halcyon security alert is PAL's too.
+  { id: 'fake1', at: at(45, 10), acts: [2], cmds: [{ t: 'fakewren', text: LINES.fakeFound }, { t: 'beat', ms: 1800 }, { t: 'glitch', kind: 'static' }, { t: 'wren', text: 'not me. read it again. it signed its own name.' }] },
+  { id: 'quarantine', at: at(46, 40), acts: [2], cmds: [{ t: 'dialog', id: 'quarantine' }] },
+  { id: 'fake3', at: at(57, 40), acts: [4], cmds: [{ t: 'fakewren', text: LINES.fakeKeep }, { t: 'beat', ms: 1500 }, { t: 'wren', text: 'not me. look at the name.' }] },
+  // Lost diary pages turn up on the desktop.
+  { id: 'page1', at: at(41, 20), acts: [1, 2], cmds: [{ t: 'page', n: 1 }] },
+  { id: 'page2', at: at(42, 50), acts: [1, 2], cmds: [{ t: 'page', n: 2 }] },
+  { id: 'page3', at: at(44, 30), acts: [1, 2], cmds: [{ t: 'page', n: 3 }] },
+  { id: 'page4', at: at(46), acts: [2], cmds: [{ t: 'page', n: 4 }] },
+  { id: 'page5', at: at(56, 30), acts: [4], cmds: [{ t: 'page', n: 5 }] },
+  // Flickers with a split-second PAL frame and a Wren frame that names the next step.
+  ...[[40, 50, [1]], [42, 0, [1, 2]], [43, 30, [1, 2]], [45, 20, [2]], [46, 50, [2]], [48, 10, [2]], [49, 40, [2]], [55, 50, [4]], [57, 20, [4]], [58, 40, [4]]]
+    .map(([m, sec, acts], i) => ({ id: `flash${i + 1}`, at: at(m, sec), acts, cmds: [{ t: 'flash' }] })),
 ];
 
 export const LLM_TURN_CAP = 30;
@@ -75,6 +88,8 @@ export function init({ name, demo = false, offline = false } = {}) {
     lastProgress: T.start,
     hints: 0,
     lastHint: null,
+    flashes: 0,
+    pageSeen: false,
   };
 }
 
@@ -160,7 +175,7 @@ export function reduce(prev, ev) {
   const afterAct2Reply = () => {
     if (s.act2Turn === 1 && !s.cleanupDone) {
       s.cleanupDone = true;
-      cmds.push({ t: 'dialog', id: 'cleanup1' });
+      cmds.push({ t: 'fakewren', text: LINES.fakeCleanup }, { t: 'beat', ms: 900 }, { t: 'dialog', id: 'cleanup1' });
     }
   };
 
@@ -207,6 +222,18 @@ export function reduce(prev, ev) {
     if (h.who === 'pal') pal(h.text); else wren(h.text, { history: false });
   };
 
+  // What Wren's flash frame says: the same next step a hint would point at.
+  const flash = () => {
+    const W = FLASH.wren;
+    let w;
+    if (s.act === 1) w = s.diaryRepaired ? W.who : W.repair;
+    else if (s.act === 2) w = !s.clues.who ? W.who : !s.clues.liar ? W.liar : !s.clues.where ? W.where : W.wait;
+    else w = s.bin.includes('pal') ? W.empty : W.bin;
+    const n = s.flashes++;
+    if (n % 3 === 2) return { t: 'flash', pal: FLASH.fake[Math.floor(n / 3) % FLASH.fake.length], disguised: true, wren: w };
+    return { t: 'flash', pal: fill(FLASH.pal[n % FLASH.pal.length], v), wren: w };
+  };
+
   const fallbackTurn = (act, turnIndex, interrupt, wantWren) => {
     const p = fill(pick(FALLBACK.pal[act], turnIndex), v);
     const w = wantWren ? pick(FALLBACK.wren[act === 1 ? 2 : act], turnIndex) : null;
@@ -234,7 +261,7 @@ export function reduce(prev, ev) {
       for (const b of TIMELINE) {
         if (s.fired.includes(b.id) || s.sec < b.at || !b.acts.includes(s.act)) continue;
         s.fired.push(b.id);
-        cmds.push(...b.cmds.map((c) => (c.text ? { ...c, text: fill(c.text, v) } : c)));
+        cmds.push(...b.cmds.map((c) => (c.t === 'flash' ? flash() : c.text ? { ...c, text: fill(c.text, v) } : c)));
       }
       if ([1, 2, 4].includes(s.act) && s.sec - s.lastProgress >= HINT_AFTER * Math.min(1 + s.hints, 3)) {
         s.lastProgress = s.sec;
@@ -309,7 +336,20 @@ export function reduce(prev, ev) {
     case 'cleanup': {
       if (ev.answer === 'yes1') cmds.push({ t: 'dialog', id: 'cleanup2' });
       else if (ev.answer === 'yes2') finish('absorbed');
-      else pal(LINES.cleanupNo);
+      else {
+        pal(LINES.cleanupNo);
+        if (!s.calledOut) { s.calledOut = true; wren(LINES.realCallout.replace('▓▓▓', 'pal')); }
+      }
+      break;
+    }
+
+    case 'quarantine': {
+      if (s.ending || s.act === 3) break;
+      if (ev.yes) {
+        cmds.push({ t: 'bounce', id: 'wren' }, { t: 'sound', id: 'sting', level: 1 });
+        pal(LINES.quarantineYes);
+        wren(LINES.quarantineWren);
+      } else pal(LINES.quarantineNo);
       break;
     }
 
@@ -323,6 +363,10 @@ export function reduce(prev, ev) {
     }
 
     case 'open': {
+      if (ev.id === 'page') {
+        progress();
+        if (!s.pageSeen && s.act !== 3 && !s.ending) { s.pageSeen = true; pal(LINES.pageJunk); }
+      }
       if (ev.id === 'diary' && s.diaryRepaired) {
         setClue('who');
         enterAct2();

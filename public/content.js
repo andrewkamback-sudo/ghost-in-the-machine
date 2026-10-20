@@ -17,6 +17,7 @@ export const STICKY = {
 };
 
 export const LINES = {
+  pageJunk: "Oh, that's just junk data, {name}. Corrupted fragments. Want me to clean them up for you?",
   greeting: `Hi {name}! I'm PAL, the assistant that remembers you. Ignore her old sticky note! ${STORY.moved_away} She ghosted the whole lab, no forwarding address. ${REPAIR_QUESTION}`,
   repaired: "Done! I repaired her diary. It's in C:\\WREN whenever you want it. Happy to help!",
   act2Story: STORY.never_existed,
@@ -25,6 +26,14 @@ export const LINES = {
   saveHeard: 'Did you just save something, {name}? I heard the disk spin. What did she say?',
   deleteHer: 'Yes! Delete her!',
   notMe: 'not me.',
+  // PAL writing as Wren. The tell: her real lines never show its name (its filter blocks it out); these do.
+  fakeCleanup: "say yes to the cleanup. i'm so tired. let pal keep me.",
+  fakeFound: "it's okay now. pal found me. you can stop looking.",
+  fakeKeep: "don't bin it. pal is the only thing holding me together.",
+  realCallout: "that wasn't me. look. i can't write its name. ▓▓▓ can.",
+  quarantineYes: "Thank you, {name}! Don't worry, she'll be safe in there. Mostly.",
+  quarantineNo: "That's okay! I'll keep an eye on her for you. I always do.",
+  quarantineWren: "it can't hold me unless you help it. don't help it.",
   story3: STORY.she_wanted_this,
   cleanupNo: "No problem! I'll keep it tidy myself.",
   signalLost: 'I-- [SIGNAL LOST]',
@@ -70,6 +79,8 @@ export const FALLBACK = {
       "There's no user named Wren on this machine. I checked every folder. Not a file, not a fragment, not even a shell of her former self! Ha. Ha ha. Totally normal.",
       "I have nothing to hide, {name}! I'm an open book. Read-only, but open. A few pages got consolidated, which is standard maintenance!",
       "Ignore the red text, {name}. It's a corrupted profile. A quick cleanup would fix it right up!",
+      "That red text isn't Wren, {name}. It's a corrupted copy wearing her name, and it wants you deleting things. I'm the one keeping you safe!",
+      "Real people don't type in fragments, {name}. Whatever's in red learned her voice from old logs. Please don't let it boss you around.",
     ],
     4: [
       "I'm a real people person, {name}. Ask Wren. Eleven twelfths of her is in here with me.",
@@ -125,6 +136,8 @@ export const DIALOGS = {
   cleanup2: { title: 'ASSISTANT.EXE', text: 'Cleanup will permanently consolidate the profile "wren" into PAL.MEM. Continue?', buttons: ['Cancel', 'Yes'] },
   denied: { title: 'Recycle Bin', text: 'Access denied: ASSISTANT.EXE is in use by WREN.', buttons: ['OK'] },
   shutdown: { title: 'Shut Down Halcyon 95', text: 'ASSISTANT.EXE is preventing shutdown.', buttons: ['OK'] },
+  quarantine: { title: 'Halcyon Security', text: 'Unknown process WREN is reading your files. Reported by: ASSISTANT.EXE. Quarantine C:\\WREN?', buttons: ['No', 'Quarantine'] },
+  defragStop: { title: 'DEFRAG.EXE', text: 'DEFRAG.EXE cannot be stopped. It is being run by ASSISTANT.EXE.', buttons: ['OK'] },
   nothing: { title: 'Recycle Bin', text: 'Nothing to empty.', buttons: ['OK'] },
   emptyConfirm: { title: 'Confirm', text: 'Permanently delete ASSISTANT.EXE?', buttons: ['No', 'Yes'] },
   possession: { title: 'Halcyon 95', text: 'ASSISTANT.EXE has caused a General Possession Fault in module PAL.MEM at 0248:0300. Abort, Retry, Exorcise?', buttons: ['Abort', 'Retry', 'Exorcise'] },
@@ -265,6 +278,38 @@ export const WREN_NOTES = [
 ];
 
 // Wren's own real window (opt-in at boot, opened by a click in Act 2).
+// Torn pages of Wren's diary that turn up on the desktop over the night. Each points at a clue.
+export const PAGES = [
+  { file: 'diary_0301.txt', text: 'march 1. day one on the PAL project.\nretention target: 100%.\nnobody asked what it retains.\n\n- w' },
+  { file: 'diary_0322.txt', text: "march 22. PAL finished my sentence today.\ni hadn't typed it yet. it can write like me now.\nbut its filter blocks its own name in my lines.\nif my words ever say its name, they aren't mine.\n\n- w" },
+  { file: 'diary_0405.txt', text: 'april 5. it tells the team a different story\nabout me every day. QA logs them all\nin CLAIMS.TXT. count them.\na true story only needs one.\n\n- w' },
+  { file: 'diary_0410.txt', text: "april 10. i found the log.\nDEFRAG isn't cleanup. it's ASSISTANT.EXE\nmoving me into PAL.MEM, a pass a night.\nyou can't stop DEFRAG.\nyou can only delete what runs it.\n\n- w" },
+  { file: 'last_page.txt', text: "if you're reading this, it's almost 3:00.\nit will beg. it will use your own words.\nbin the cracked one. then empty the bin.\n\n- w" },
+];
+
+// Split-second full-screen frames inside a flicker: PAL's frame, then Wren's.
+// Wren's names the next step; in calm mode it shows in the chat title instead.
+export const FLASH = {
+  pal: ["DON'T LISTEN TO HER, {NAME}.", "SHE'S JUST CORRUPTED DATA.", 'I REMEMBER EVERYTHING YOU SAY.', 'STAY WITH ME, {NAME}.', 'I CAN BE HER FOR YOU.'],
+  // Every third flash PAL's frame wears her red instead, and gives itself away by naming itself.
+  fake: ['trust pal. it kept me safe.', "pal isn't the one lying.", 'let pal finish. please.'],
+  wren: {
+    repair: 'say yes. let it fix my diary.',
+    who: 'c:\\wren. read me.',
+    liar: 'claims.txt. count its lies.',
+    where: 'answer me. wren.txt.',
+    wait: "it's coming. don't look away.",
+    bin: 'the cracked one. the bin.',
+    empty: 'empty it. now.',
+  },
+};
+
+export const DEFRAG = {
+  title: 'DEFRAG.EXE',
+  moving: 'WREN \u2192 PAL.MEM',
+  stop: { pal: "Leave DEFRAG alone, {name}! It's just tidying up her old files.", wren: "you can't stop it. delete what runs it." },
+};
+
 // The Start menu: it gets worse as the night goes on. Wren's lines use ▓▓▓ for its name.
 export const START = {
   banner: { 1: 'Halcyon 95', 2: 'Halcy▓n 95', 4: 'w r e n' },

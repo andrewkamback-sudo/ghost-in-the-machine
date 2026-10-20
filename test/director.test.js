@@ -181,3 +181,36 @@ test('quotes and cut points', () => {
   assert.ok(isRepairYes('Sure!') && isRepairYes('can you fix the diary') && !isRepairYes('no way'));
   assert.equal(clueCount(init()), 0);
 });
+
+test('flash frames: PAL then Wren, and Wren names the next step', async () => {
+  const { FLASH } = await import('../public/content.js');
+  let { cmds } = run(offline(), [{ type: 'start' }, { type: 'tick', dt: 50 }]);
+  const f1 = cmds.find((c) => c.t === 'flash');
+  assert.equal(f1.wren, FLASH.wren.repair);
+  assert.match(f1.pal, /JOSÉ|CORRUPTED|REMEMBER|STAY|HER/);
+  ({ cmds } = run(offline(), [{ type: 'start' }, { type: 'say', text: 'yes' }, { type: 'open', id: 'diary' }, { type: 'tick', dt: 320 }]));
+  assert.equal(cmds.filter((c) => c.t === 'flash').at(-1).wren, FLASH.wren.liar);
+});
+
+test('lost pages turn up on time; opening one is progress and PAL calls it junk once', () => {
+  const { state, cmds } = run(offline(), [{ type: 'start' }, { type: 'tick', dt: 85 }]);
+  assert.ok(has(cmds, 'page', { n: 1 }));
+  assert.ok(!has(cmds, 'page', { n: 2 }));
+  const r = run(state, [{ type: 'open', id: 'page' }, { type: 'open', id: 'page' }]);
+  assert.equal(r.cmds.filter((c) => c.t === 'pal' && /junk data/.test(c.text)).length, 1);
+  assert.equal(r.state.lastProgress, state.sec);
+});
+
+test('PAL posing as Wren names itself; the real Wren never can, and calls it out', () => {
+  let s = offline();
+  ({ state: s } = run(s, [{ type: 'start' }, { type: 'say', text: 'yes' }, { type: 'open', id: 'diary' }]));
+  const { state, cmds } = run(s, [{ type: 'say', text: 'who are you' }, { type: 'tick', dt: 400 }]);
+  const fakes = cmds.filter((c) => c.t === 'fakewren');
+  assert.ok(fakes.length >= 2 && fakes.every((c) => /\bpal\b/.test(c.text)));
+  assert.ok(cmds.filter((c) => c.t === 'wren').every((c) => !/\bpal\b/i.test(c.text)));
+  assert.ok(has(cmds, 'dialog', { id: 'cleanup1' }) && has(cmds, 'dialog', { id: 'quarantine' }));
+  const no = run(state, [{ type: 'cleanup', answer: 'no' }]).cmds;
+  assert.ok(no.some((c) => c.t === 'wren' && /can't write its name/.test(c.text)));
+  const q = run(state, [{ type: 'quarantine', yes: true }]).cmds;
+  assert.ok(has(q, 'bounce', { id: 'wren' }) && q.some((c) => c.t === 'wren'));
+});

@@ -135,6 +135,17 @@
         <ul id="sticky-list"></ul>
       </div>
 
+      <div id="pages"></div>
+
+      <div class="window win" id="win-defrag" aria-label="DEFRAG.EXE">
+        <div class="title-bar"><div class="title-bar-text" id="defrag-title">DEFRAG.EXE</div>
+          <div class="title-bar-controls"><button aria-label="Stop DEFRAG.EXE" id="defrag-stop"></button></div></div>
+        <div class="window-body defrag-body">
+          <canvas id="defrag-grid" width="116" height="32" aria-hidden="true"></canvas>
+          <div id="defrag-status" class="defrag-status"></div>
+        </div>
+      </div>
+
       <div class="window win" id="win-chat">
         <div class="title-bar"><div class="title-bar-text" id="chat-title">ASSISTANT.EXE</div>
           <div class="title-bar-controls"><button aria-label="Close" data-close="win-chat"></button></div></div>
@@ -177,6 +188,7 @@
 
       <video id="cam" muted playsinline aria-hidden="true"></video>
       <div id="static"></div>
+      <div id="flash" aria-hidden="true" hidden><div id="flash-text"></div></div>
       <div id="cursor" hidden></div>
       <div id="blocker" hidden></div>
     </div>

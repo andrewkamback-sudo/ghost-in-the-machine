@@ -202,3 +202,21 @@ body.wait, body.wait * { cursor: wait !important; }
 .end-voice { color: var(--wren-dark); font-size: 24px !important; min-height: 26px; }
 #end.absorbed .end-hero { background: #3a0010; }
 #end.absorbed .end-voice { color: var(--bone); }
+
+/* Lost diary pages, in the free space under the sticky note. */
+.g-page { background-image: url(img/page.svg); }
+#pages .icon { left: auto; width: 62px; }
+#pages .icon .label { font-size: 10px; }
+
+/* DEFRAG.EXE: always moving, eating Wren's red sectors. */
+#win-defrag { right: 6px; bottom: 32px; width: 124px; }
+#win-defrag .title-bar-text { font-size: 10px; }
+.defrag-body { margin: 2px; }
+#defrag-grid { display: block; width: 116px; height: 32px; image-rendering: pixelated; background: #fff; box-shadow: inset 1px 1px grey; }
+.defrag-status { font-size: 10px; line-height: 12px; margin-top: 2px; white-space: pre; }
+
+/* A split-second frame over the whole window (one at a time, under 3 a second; never in calm mode). */
+#flash { position: fixed; inset: 0; z-index: 1000; pointer-events: none; display: grid; place-items: center; text-align: center; padding: 5vw; }
+#flash-text { max-width: 90vw; }
+#flash.pal { background: navy; color: #fff; font: 700 clamp(22px, 4.5vw, 64px)/1.1 "Pixelated MS Sans Serif", sans-serif; }
+#flash.wren { background: #050005; color: var(--wren-dark); font: clamp(32px, 6.5vw, 96px)/0.95 "VT323", monospace; text-shadow: 4px 0 var(--blood); }

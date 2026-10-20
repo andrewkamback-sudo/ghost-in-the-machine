@@ -171,6 +171,7 @@ function blip(freq, dur, gain, type = 'square') {
 }
 
 export const click = () => blip(1800, 0.03, 0.08);
+export const seek = () => blip(140 + Math.random() * 80, 0.025, 0.04); // DEFRAG's disk head
 export const tick = () => blip(2400 + Math.random() * 600, 0.015, 0.035);
 export const errorBeep = () => { blip(440, 0.12, 0.12, 'square'); setTimeout(() => blip(330, 0.18, 0.12, 'square'), 130); };
 export const chime = () => { blip(880, 0.15, 0.1, 'sine'); setTimeout(() => blip(1320, 0.25, 0.09, 'sine'), 120); };
