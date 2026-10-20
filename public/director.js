@@ -1,15 +1,38 @@
 // The Director owns the story: acts, clock, clues, stories, interrupts, endings.
 // Pure: no DOM, no network. reduce(state, event) returns { state, cmds }, and
 // game.js carries out the commands. Tested by test/director.test.js.
-import { STORY, LINES, FALLBACK, fill, maskPal } from './content.js';
+import { STORY, LINES, FALLBACK, HINTS, fill, maskPal } from './content.js';
 
+const at = (m, s = 0) => 2 * 3600 + m * 60 + s; // 2:mm:ss AM
 export const T = {
-  start: 2 * 3600 + 48 * 60 + 7, // 2:48:07
-  act2: 2 * 3600 + 50 * 60, // 2:50:00
-  possession: 2 * 3600 + 51 * 60 + 30, // 2:51:30
-  jump: 2 * 3600 + 57 * 60, // 2:57:00
+  start: at(40), // the clock starts at 2:40:00
+  act2: at(44), // Act 2 by the clock at the latest
+  gate: at(48), // THE POSSESSION on 2 clues from here
+  possession: at(50), // ...or on the clock alone
+  jump: at(55), // PAL starts pass 12 early
   end: 3 * 3600, // 3:00:00
 };
+export const HINT_AFTER = 45; // game seconds without progress before a hint
+
+// Timed beats: something happens every 45 to 60 seconds. Each fires once,
+// only in the listed acts. `ask` beats offer a real-machine haunt in the story.
+export const TIMELINE = [
+  { id: 'ask-voice', at: at(41), acts: [1, 2], cmds: [{ t: 'ask', id: 'voice' }] },
+  { id: 'leak', at: at(41, 45), acts: [1], cmds: [{ t: 'glitch', kind: 'leak' }, { t: 'sound', id: 'sting', level: 1 }] },
+  { id: 'ask-notify', at: at(42, 30), acts: [1, 2], cmds: [{ t: 'ask', id: 'notify' }] },
+  { id: 'clock', at: at(43, 15), acts: [1, 2], cmds: [{ t: 'glitch', kind: 'clock' }] },
+  { id: 'ask-window', at: at(45), acts: [2], cmds: [{ t: 'ask', id: 'window' }] },
+  { id: 'her', at: at(45, 45), acts: [2], cmds: [{ t: 'glitch', kind: 'her' }, { t: 'voice', who: 'wren', text: 'help me' }] },
+  { id: 'note2', at: at(46, 30), acts: [2], cmds: [{ t: 'file_note', n: 1 }] },
+  { id: 'title', at: at(47, 15), acts: [2], cmds: [{ t: 'glitch', kind: 'title' }, { t: 'glitch', kind: 'static' }] },
+  { id: 'ask-camera', at: at(47, 30), acts: [2], cmds: [{ t: 'ask', id: 'camera' }] },
+  { id: 'dread3', at: at(48, 30), acts: [2], cmds: [{ t: 'dread', level: 3 }, { t: 'glitch', kind: 'static' }, { t: 'window_drift', small: true }] },
+  { id: 'note3', at: at(49, 15), acts: [2], cmds: [{ t: 'file_note', n: 2 }] },
+  { id: 'a4-plead', at: at(56), acts: [4], cmds: [{ t: 'wren_window', text: "i'm still here. the bin." }, { t: 'window_drift', small: true }] },
+  { id: 'a4-away', at: at(57), acts: [4], cmds: [{ t: 'notify', n: 'N4' }, { t: 'glitch', kind: 'static' }] },
+  { id: 'a4-two', at: at(58), acts: [4], cmds: [{ t: 'voice', who: 'pal', text: 'Two minutes, {name}.' }, { t: 'dread', level: 5 }] },
+  { id: 'a4-now', at: at(59), acts: [4], cmds: [{ t: 'glitch', kind: 'static' }, { t: 'glitch', kind: 'flicker' }] },
+];
 
 export const LLM_TURN_CAP = 30;
 
@@ -48,6 +71,10 @@ export function init({ name, demo = false, offline = false } = {}) {
     answer: null,
     notifyOff: false,
     paused: false,
+    fired: [],
+    lastProgress: T.start,
+    hints: 0,
+    lastHint: null,
   };
 }
 
@@ -117,7 +144,8 @@ export function reduce(prev, ev) {
     if (s.act !== 1) return;
     s.act = 2;
     s.repairPending = false;
-    cmds.push({ t: 'act', act: 2 });
+    progress();
+    cmds.push({ t: 'act', act: 2 }, { t: 'dread', level: 2 });
     story('never_existed');
     cmds.push({ t: 'beat', ms: 700 });
     pal(LINES.act2Story);
@@ -136,8 +164,11 @@ export function reduce(prev, ev) {
     }
   };
 
+  const progress = () => { s.lastProgress = s.sec; s.hints = 0; };
+
   const setClue = (k) => {
     if (s.clues[k]) return;
+    progress();
     s.clues[k] = true;
     cmds.push({ t: 'sticky', item: k });
   };
@@ -146,7 +177,7 @@ export function reduce(prev, ev) {
     if (s.ending) return;
     if (s.act === 2) {
       const n = clueCount(s);
-      const ready = s.demo ? n >= 2 : n >= 2 && s.sec >= T.act2;
+      const ready = s.demo ? n >= 2 : n >= 2 && s.sec >= T.gate;
       if (ready || s.sec >= T.possession) {
         s.act = 3;
         cmds.push({ t: 'possession', quote: pickQuote(s.transcript) });
@@ -160,6 +191,20 @@ export function reduce(prev, ev) {
     s.ending = kind;
     s.act = 'end';
     cmds.push({ t: 'ending', kind, answer: s.answer });
+  };
+
+  // When the player stalls, point at the next step: pulse an icon and say what to do.
+  const hint = () => {
+    const H = HINTS;
+    let h;
+    if (s.act === 1) h = s.diaryRepaired ? H.openDiary : H.repair;
+    else if (s.act === 2) h = !s.clues.who ? (s.diaryRepaired ? H.openDiary2 : H.who) : !s.clues.liar ? H.liar : !s.clues.where ? H.where : H.wait;
+    else if (s.act === 4) h = s.bin.includes('pal') ? H.empty : H.bin;
+    if (!h) return;
+    cmds.push({ t: 'hint', target: h.target });
+    if (s.lastHint === h.text) return; // the same hint again only pulses the icon
+    s.lastHint = h.text;
+    if (h.who === 'pal') pal(h.text); else wren(h.text, { history: false });
   };
 
   const fallbackTurn = (act, turnIndex, interrupt, wantWren) => {
@@ -186,6 +231,16 @@ export function reduce(prev, ev) {
       if (s.ending || s.act === 3) break;
       s.sec = Math.min(T.end, s.sec + ev.dt);
       if (s.act === 1 && s.sec >= T.act2) enterAct2();
+      for (const b of TIMELINE) {
+        if (s.fired.includes(b.id) || s.sec < b.at || !b.acts.includes(s.act)) continue;
+        s.fired.push(b.id);
+        cmds.push(...b.cmds.map((c) => (c.text ? { ...c, text: fill(c.text, v) } : c)));
+      }
+      if ([1, 2, 4].includes(s.act) && s.sec - s.lastProgress >= HINT_AFTER * Math.min(1 + s.hints, 3)) {
+        s.lastProgress = s.sec;
+        s.hints++;
+        hint();
+      }
       gates();
       break;
     }
@@ -204,11 +259,12 @@ export function reduce(prev, ev) {
         if (s.repairPending && !s.diaryRepaired && isRepairYes(text)) {
           s.diaryRepaired = true;
           s.repairPending = false;
+          progress();
           cmds.push({ t: 'repair' });
           pal(LINES.repaired);
           break;
         }
-        if (s.turn >= 4) { enterAct2(); gates(); break; }
+        if (s.turn >= 5) { enterAct2(); gates(); break; }
         request(s, cmds, 'a1', false, false, () => deliver(fallbackTurn(1, s.turn - 1, false, false)));
         break;
       }
@@ -261,6 +317,7 @@ export function reduce(prev, ev) {
       if (s.diaryRepaired) break;
       s.diaryRepaired = true;
       s.repairPending = false;
+      progress();
       cmds.push({ t: 'repair' });
       break;
     }
@@ -291,7 +348,8 @@ export function reduce(prev, ev) {
           cmds.push({ t: 'bounce', id: 'pal' }, { t: 'dialog', id: 'denied' });
         } else if (!s.bin.includes('pal')) {
           s.bin.push('pal');
-          cmds.push({ t: 'binned', id: 'pal' });
+          progress();
+          cmds.push({ t: 'binned', id: 'pal' }, { t: 'sound', id: 'sting', level: 2 });
           const quote = pickQuote(s.transcript);
           pal(quote ? LINES.plea.replace('{quote}', quote) : LINES.pleaNoQuote, quote ? { quote } : {});
         }
@@ -337,7 +395,8 @@ export function reduce(prev, ev) {
       s.act = 4;
       s.palCracked = true;
       s.sec = Math.max(s.sec, T.jump);
-      cmds.push({ t: 'act', act: 4 }, { t: 'cracked' });
+      progress();
+      cmds.push({ t: 'act', act: 4 }, { t: 'cracked' }, { t: 'dread', level: 4 });
       story('she_wanted_this');
       pal(LINES.story3);
       break;

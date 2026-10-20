@@ -3,6 +3,7 @@
 import * as D from './director.js';
 import * as C from './content.js';
 import * as H from './haunt.js';
+import * as A from './sfx.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -17,7 +18,11 @@ let paused = false;
 let offline = params.has('offline');
 let fileMode = 'notepad'; // 'folder' | 'download' | 'notepad'
 let notifyOn = false;
-let windowOn = false; // Wren's own window, opt-in at boot
+let windowOn = false; // Wren's own window, opt-in at boot or in the story
+const asked = new Set(); // real-machine haunts already decided (at setup or in the story)
+const favicon = document.querySelector('link[rel=icon]');
+const FAVICON = favicon.href;
+const RED_EYE = 'data:image/svg+xml,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect width='16' height='16' fill='black'/><rect x='4' y='5' width='8' height='6' fill='red'/><rect x='2' y='6' width='12' height='4' fill='red'/><rect x='7' y='6' width='2' height='4' fill='black'/></svg>");
 let claims = []; // CLAIMS.TXT entries
 let noteMode = null; // what Notepad shows
 let pollTimer = null;
@@ -32,11 +37,17 @@ let player = { name: '', calm: matchMedia('(prefers-reduced-motion: reduce)').ma
 
 const queue = [];
 let running = false;
+const waitingSay = []; // typed while PAL was still talking
 
 function dispatch(ev) {
   if (!S) return;
+  const before = S.act;
   const r = D.reduce(S, ev);
   S = r.state;
+  // THE POSSESSION takes the whole real screen when the player's own click set it off (Esc exits).
+  if (before !== 3 && S.act === 3 && navigator.userActivation?.isActive && !player.calm) {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  }
   queue.push(...r.cmds);
   if (!running) drain();
 }
@@ -52,12 +63,21 @@ async function drain() {
     }
   }
   running = false;
+  if (waitingSay.length && S && !S.ending && S.act !== 3) dispatch({ type: 'say', text: waitingSay.shift() });
 }
 
 async function run(c) {
   switch (c.t) {
     case 'beat': return sleep(c.ms / SPEED);
     case 'glitch': return glitch(c.kind);
+    case 'sound': return void A.sting(c.level);
+    case 'dread': return void A.setDread(c.level);
+    case 'voice': return void A.speak(c.who, c.text);
+    case 'ask': return askHaunt(c.id);
+    case 'hint': return pulse(c.target);
+    case 'file_note': return fileNote(c.n);
+    case 'window_drift': return void H.wrenWindowDrift({ calm: player.calm, small: c.small });
+    case 'wren_window': return void H.wrenWindowSay(c.text);
     case 'pal': return say('pal', c.text, { cut: c.cut, quote: c.quote });
     case 'wren': return say('wren', c.text);
     case 'claims': claims.push({ at: c.at, text: C.STORY[c.story] }); if (noteMode === 'claims') showClaims(); return;
@@ -71,7 +91,7 @@ async function run(c) {
     case 'file_reply': return fileReply(c.no);
     case 'notify': return notifyN(c.n);
     case 'possession': return possession(c.quote);
-    case 'act': if (c.act === 2) creep(); if (c.act === 4) $('screen').classList.add('possessed'); return;
+    case 'act': if (c.act === 4) $('screen').classList.add('possessed'); return;
     case 'cracked': $('icon-pal').classList.add('cracked'); return;
     case 'binned': $('icon-pal').classList.add('binned'); $('icon-bin').classList.add('full'); return;
     case 'ending': return ending(c.kind, c.answer);
@@ -112,6 +132,7 @@ async function typeInto(el, text, { cps = 40, cut = null, stutter = false } = {}
   const end = cut ?? text.length;
   for (let i = 0; i < end; i++) {
     span.textContent += text[i];
+    if (i % 3 === 0) A.tick();
     log.scrollTop = log.scrollHeight;
     const jitter = stutter && i % 7 === 3 ? 90 : 0;
     await sleep(1000 / (cps * SPEED) + jitter);
@@ -127,6 +148,7 @@ async function typeInto(el, text, { cps = 40, cut = null, stutter = false } = {}
 async function say(who, text, { cut = null, quote = null, history = true } = {}) {
   if (who === 'pal') {
     const p = line('pal', 'PAL');
+    A.speak('pal', cut != null ? text.slice(0, cut) : text);
     const span = await typeInto(p, text, { cut });
     if (quote && cut == null) underline(span, quote);
     announce(`PAL: ${cut != null ? text.slice(0, cut) + '--' : text}`);
@@ -134,6 +156,7 @@ async function say(who, text, { cut = null, quote = null, history = true } = {})
   } else if (who === 'wren') {
     const p = line('wren');
     if (H.hasWrenWindow()) H.wrenWindowSay(text);
+    A.speak('wren', text.replace(/▓+/g, 'pal'));
     await typeInto(p, text, { cps: 30, stutter: true });
     announce(`Red text: ${text}`);
   } else {
@@ -165,10 +188,11 @@ $('chat-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const input = $('chat-input');
   const text = input.value.trim();
-  if (!text || !S || S.ending || S.act === 3 || running) return;
+  if (!text || !S || S.ending || S.act === 3) return;
   input.value = '';
   playerLine(text);
-  dispatch({ type: 'say', text });
+  if (running) waitingSay.push(text);
+  else dispatch({ type: 'say', text });
 });
 
 // ---------- The API turn ----------
@@ -370,44 +394,133 @@ async function dialogFor(id) {
 // ---------- WREN.TXT: the file beat, the answer, the reply ----------
 
 async function fileBeat() {
-  await fileBeatInner();
-  if (windowOn) await offerWrenWindow();
+  // Decided at setup already?
+  if (fileMode === 'folder' && H.hasFolder()) return firstNoteOnDisk(C.FILE_BEAT.folder);
+  if (fileMode === 'download') { await say('wren', C.FILE_BEAT.download); downloadActions(); return; }
+  if (asked.has('file') || H.support.framed) { await say('wren', C.FILE_BEAT.notepad); revealNote(); return; }
+  // Otherwise Wren asks, in the story.
+  asked.add('file');
+  const ask = H.support.folder ? C.ASKS.folder : C.ASKS.download;
+  await say('wren', ask.line);
+  const yes = await consent(ask, () => (H.support.folder ? H.pickFolder().then(() => { fileMode = 'folder'; }) : (fileMode = 'download')));
+  if (yes && fileMode === 'folder' && H.hasFolder()) return firstNoteOnDisk(C.ASK_REPLIES.wrenYes);
+  if (yes && fileMode === 'download') { await say('wren', C.ASK_REPLIES.wrenYes); downloadActions(); return; }
+  await say('wren', C.ASK_REPLIES.wrenNo);
+  revealNote();
 }
 
-async function offerWrenWindow() {
-  await say('wren', C.WREN_WINDOW.ask, { history: false });
-  const row = $('chat-actions');
-  row.hidden = false;
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.textContent = C.WREN_WINDOW.button;
-  b.addEventListener('click', () => {
-    b.remove();
-    if (!row.children.length) row.hidden = true;
-    if (!H.openWrenWindow()) { say('sys', C.WREN_WINDOW.blocked); return; }
-    H.wrenWindowSay("it's quieter in here. ▓▓▓ can still see this window. keep reading.");
-    $('chat-input').focus();
-  });
-  row.append(b);
-}
-
-async function fileBeatInner() {
-  if (fileMode === 'folder') {
-    const r = await H.writeWren(1, C.WREN_FILE.write1, C.WREN_FILE.write1Again);
-    if (r.ok) {
-      await say('wren', C.FILE_BEAT.folder, { history: false });
-      startPoll();
-      return;
-    }
-    if (r.line) await say('sys', r.line);
-  }
-  if (fileMode === 'download') {
-    await say('wren', C.FILE_BEAT.download, { history: false });
-    downloadActions();
+async function firstNoteOnDisk(line) {
+  const r = await H.writeWren(1, C.WREN_FILE.write1, C.WREN_FILE.write1Again);
+  if (r.ok) {
+    await say('wren', line);
+    say('sys', `WREN.TXT is in your folder: ${H.fileState().folder} › Halcyon 95. Open it, type after the arrow, and save.`);
+    startPoll();
     return;
   }
-  await say('wren', C.FILE_BEAT.notepad, { history: false });
+  if (r.line) await say('sys', r.line);
+  await say('wren', C.FILE_BEAT.notepad);
   revealNote();
+}
+
+// Wren's later notes: on the real disk if she has it, otherwise in the chat.
+async function fileNote(n) {
+  const text = C.WREN_NOTES[n - 1];
+  if (fileMode === 'folder' && H.hasFolder()) {
+    const r = await H.writeWren(9, `\n====\n${text}\n`);
+    if (r.ok) { await say('wren', 'i wrote more in wren.txt. read it.'); return; }
+  }
+  await say('wren', text);
+}
+
+// ---------- The real-machine haunts, asked for in the story ----------
+
+// A plain system dialog. The browser prompt (if any) starts inside the Yes click itself,
+// because browsers only allow it from the player's own click.
+function consent(ask, onYes) {
+  const dlg = $('dialog');
+  $('dialog-title').textContent = ask.title;
+  $('dialog-text').textContent = ask.text;
+  const row = $('dialog-buttons');
+  row.replaceChildren();
+  return new Promise((resolve) => {
+    let result = false;
+    const no = document.createElement('button');
+    no.type = 'button';
+    no.textContent = ask.no;
+    no.addEventListener('click', () => dlg.close());
+    const yes = document.createElement('button');
+    yes.type = 'button';
+    yes.textContent = ask.yes;
+    yes.addEventListener('click', () => {
+      A.click();
+      let p;
+      try { p = onYes(); } catch { p = null; }
+      result = true;
+      dlg.close();
+      Promise.resolve(p).then((v) => resolve(v !== false), () => resolve(false));
+    });
+    row.append(no, yes);
+    setTimeout(() => no.focus(), 0);
+    dlg.addEventListener('close', () => { busy--; if (!result) resolve(false); }, { once: true });
+    busy++;
+    A.chime();
+    dlg.showModal();
+  });
+}
+
+async function askHaunt(id) {
+  if (asked.has(id) || H.support.framed || S.ending) return;
+  asked.add(id);
+  const ask = C.ASKS[id];
+  const v = vars();
+  const reply = async (ok) => {
+    if (ask.who === 'pal') await say('pal', C.fill(ok ? (id === 'camera' ? C.ASK_REPLIES.cameraYes : C.ASK_REPLIES.palYes) : C.ASK_REPLIES.palNo, v));
+    else await say('wren', ok ? C.ASK_REPLIES.wrenYes : 'then stay close to the chat.');
+  };
+  if (id === 'voice') {
+    if (!('speechSynthesis' in window)) return;
+    await say('pal', C.fill(ask.line, v));
+    const ok = await consent(ask, () => A.setVoice(true));
+    return reply(ok);
+  }
+  if (id === 'notify') {
+    if (!H.support.notify || notifyOn) return;
+    await say('pal', C.fill(ask.line, v));
+    const ok = await consent(ask, () => new Promise((r) => H.askNotify((st) => { notifyOn = st === 'on'; if (st !== 'bell') r(notifyOn); })));
+    return reply(ok && notifyOn);
+  }
+  if (id === 'window') {
+    await say('wren', ask.line);
+    const ok = await consent(ask, () => H.openWrenWindow());
+    if (ok && H.hasWrenWindow()) { windowOn = true; H.wrenWindowSay("it's quieter in here. ▓▓▓ can still see this window."); }
+    else if (ok) say('sys', C.WREN_WINDOW.blocked);
+    return reply(ok && H.hasWrenWindow());
+  }
+  if (id === 'camera') {
+    if (!H.support.camera) return;
+    await say('pal', C.fill(ask.line, v));
+    const ok = await consent(ask, () => H.startCamera($('cam')));
+    if (ok && H.cameraOn()) reflect(0.12, 2500);
+    return reply(ok && H.cameraOn());
+  }
+}
+
+// The player's own face, faint in the glass.
+function reflect(opacity, ms) {
+  const cam = $('cam');
+  if (!H.cameraOn()) return;
+  cam.style.opacity = String(opacity);
+  if (ms) setTimeout(() => { if (H.cameraOn()) cam.style.opacity = S?.act >= 3 ? '0.1' : '0'; }, ms);
+}
+
+// Point at the next step: the icon bobs for a few seconds.
+function pulse(target) {
+  const el = $(`icon-${target}`);
+  if (!el || el.hidden) return;
+  el.classList.remove('pulse');
+  void el.offsetWidth;
+  el.classList.add('pulse');
+  setTimeout(() => el.classList.remove('pulse'), 4000);
 }
 
 // Her note appears on the desktop as a new icon instead of jumping over the chat.
@@ -544,6 +657,40 @@ function sendN3() {
 // ---------- Glitches (no flashing in calm mode) ----------
 
 function glitch(kind) {
+  if (kind === 'static') A.staticBurst(0.7);
+  if (kind === 'clock') {
+    const clock = $('clock');
+    clock.textContent = '??:??:?? AM';
+    A.staticBurst(0.3, 0.06);
+    setTimeout(() => { if (S) clock.textContent = `${D.clock(S.sec)} AM`; }, 1100);
+    return;
+  }
+  if (kind === 'her') {
+    const label = $('icon-wren').querySelector('.label');
+    label.textContent = 'C:\\HER';
+    setTimeout(() => { label.textContent = 'C:\\WREN'; }, 2200);
+    return;
+  }
+  if (kind === 'title') {
+    const title = $('chat-title');
+    title.textContent = 'ASSISTANT.EXE (she can hear you)';
+    setTimeout(() => { title.textContent = 'ASSISTANT.EXE'; }, 1600);
+    return;
+  }
+  if (kind === 'leak') {
+    // One word of PAL's last line turns red and reads HER, then heals.
+    const span = [...log.querySelectorAll('.line.pal > span:not(.who)')].at(-1);
+    if (!span) return;
+    const saved = span.textContent;
+    const words = saved.split(' ');
+    const i = Math.min(words.length - 1, 3);
+    const red = document.createElement('b');
+    red.style.color = '#c00000';
+    red.textContent = 'HER';
+    span.replaceChildren(words.slice(0, i).join(' ') + ' ', red, ' ' + words.slice(i + 1).join(' '));
+    setTimeout(() => { span.textContent = saved; }, 1200);
+    return;
+  }
   if (player.calm && (kind === 'static' || kind === 'flicker')) return;
   const el = kind === 'static' ? $('static') : $('screen');
   const cls = kind === 'static' ? 'burst' : 'flicker';
@@ -558,28 +705,6 @@ function corruptChat(ms) {
   const saved = spans.map((sp) => sp.textContent);
   spans.forEach((sp) => { sp.textContent = sp.textContent.replace(/\S/g, (ch, i) => (i % 3 ? '▓' : ch)); });
   setTimeout(() => spans.forEach((sp, i) => { sp.textContent = saved[i]; }), ms);
-}
-
-// Act 2: small things go wrong while the player isn't looking straight at them.
-function creep() {
-  const run = S;
-  const at = (ms, fn) => setTimeout(() => { if (S === run && S.act === 2 && !paused) fn(); }, ms / SPEED);
-  at(18000, () => {
-    const clock = $('clock');
-    clock.textContent = '??:??:?? AM';
-    setTimeout(() => { clock.textContent = `${D.clock(S.sec)} AM`; }, 900);
-  });
-  at(34000, () => {
-    const label = $('icon-wren').querySelector('.label');
-    label.textContent = 'C:\\HER';
-    setTimeout(() => { label.textContent = 'C:\\WREN'; }, 1600);
-  });
-  at(52000, () => {
-    const title = $('chat-title');
-    const old = title.textContent;
-    title.textContent = 'ASSISTANT.EXE (she can hear you)';
-    setTimeout(() => { title.textContent = old; }, 1200);
-  });
 }
 
 // ---------- THE POSSESSION (16 s, no network) ----------
@@ -611,7 +736,11 @@ async function possession(quote) {
   glitch('static');
   glitch('flicker');
   corruptChat(1400);
+  A.sting(3);
+  A.setDread(4);
+  favicon.href = RED_EYE;
   $('screen').classList.add('possessed');
+  if (H.cameraOn()) { reflect(0.38, 3500); A.speak('pal', `I see you, ${S.name}.`); }
   const cur = $('cursor');
   cur.style.left = '200px';
   cur.style.top = '160px';
@@ -629,6 +758,7 @@ async function possession(quote) {
   $('screen').append(ghost);
   pal.style.visibility = 'hidden';
   dialogShow(C.DIALOGS.possession);
+  A.errorBeep();
   const drift = H.wrenWindowDrift({ calm: player.calm });
   const steps = player.calm ? 1 : 3;
   for (let i = 1; i <= steps; i++) {
@@ -672,6 +802,7 @@ async function possession(quote) {
   for (const ch of msg) { pre.textContent += ch; await sleep(1000 / (30 * SPEED)); }
   announce(`Notepad: ${msg}`);
   document.title = oldTitle;
+  favicon.href = FAVICON;
   $('blocker').hidden = true;
   busy--;
   dispatch({ type: 'possession_done' });
@@ -690,6 +821,10 @@ const dialogHide = () => $('dialog').open && $('dialog').close();
 
 async function ending(kind, answer) {
   busy++;
+  H.stopCamera($('cam'));
+  $('cam').style.opacity = '0';
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  if (kind === 'freed') { A.setDread(0); A.chime(); } else { A.sting(4); A.setDread(2); A.speak('pal', C.fill(C.NOTIFY.N3absorbed, vars())); }
   $('clock').textContent = `${D.clock(S.sec)} AM`;
   clearInterval(pollTimer);
   $('blocker').hidden = false;
@@ -808,7 +943,8 @@ document.addEventListener('keydown', (e) => {
   const typing = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName);
   if ($('dialog').open) return; // Esc in a dialog means Cancel (native)
   if (e.code === 'Backquote' && !typing) { e.preventDefault(); $('trace').hidden = !$('trace').hidden; renderTrace(); return; }
-  if (e.key === 'Escape' && S && !S.ending && !paused && !$('stage').hidden) pause('esc');
+  if (e.key === 'Escape' && S && !S.ending && !paused && !$('stage').hidden && !document.fullscreenElement) pause('esc');
+  if ((e.key === 'm' || e.key === 'M') && !typing && !$('stage').hidden) setSound(A.isMuted());
 });
 
 function renderTrace() {
@@ -833,6 +969,49 @@ function fit() {
   $('dialog').style.zoom = zoom;
 }
 addEventListener('resize', fit);
+
+// ---------- Sound toggle (tray and M) ----------
+
+function setSound(on) {
+  A.setMuted(!on);
+  $('sound-tray').checked = on;
+}
+$('sound-tray').addEventListener('change', (e) => setSound(e.target.checked));
+
+// ---------- The real browser tab calls you back ----------
+
+document.addEventListener('visibilitychange', () => {
+  if (!S || S.ending || $('stage').hidden) return;
+  if (document.hidden) {
+    document.title = S.act === 1 ? 'PAL misses you' : `come back, ${S.name.toLowerCase()}`;
+    if (S.act >= 2) favicon.href = RED_EYE;
+  } else {
+    document.title = 'Ghost in the Machine';
+    if (S.act < 3) favicon.href = FAVICON;
+  }
+});
+
+// ---------- Draggable windows (by the title bar, inside the 512x384 screen) ----------
+
+for (const win of document.querySelectorAll('.win')) {
+  const bar = win.querySelector('.title-bar');
+  bar.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button') || !$('blocker').hidden) return;
+    const z = $('screen').getBoundingClientRect().width / 512;
+    const start = { x: e.clientX, y: e.clientY, left: win.offsetLeft, top: win.offsetTop };
+    front(win.id);
+    bar.setPointerCapture(e.pointerId);
+    const move = (ev) => {
+      const left = Math.max(0, Math.min(512 - win.offsetWidth, start.left + (ev.clientX - start.x) / z));
+      const top = Math.max(0, Math.min(384 - 26 - 20, start.top + (ev.clientY - start.y) / z));
+      win.style.left = `${left}px`;
+      win.style.top = `${top}px`;
+    };
+    const up = () => { bar.removeEventListener('pointermove', move); bar.removeEventListener('pointerup', up); };
+    bar.addEventListener('pointermove', move);
+    bar.addEventListener('pointerup', up);
+  });
+}
 
 // ---------- Calm mode ----------
 
@@ -950,6 +1129,7 @@ $('boot-form').addEventListener('submit', async (e) => {
   $('name-error').hidden = true;
   if (!$('setup-1').hidden) { setupStep(2); return; }
   player.name = name;
+  A.unlock();
   $('boot').hidden = true;
   if (!offline) {
     try {
@@ -966,6 +1146,7 @@ function startGame() {
   S = D.init({ name: player.name, demo: DEMO, offline });
   busy = 0; paused = false; claims = []; noteMode = null; waitingAnswer = false; n1Sent = false; n3Armed = false;
   queue.length = 0;
+  waitingSay.length = 0;
   log.replaceChildren();
   srLog.replaceChildren();
   $('chat-actions').hidden = true;
@@ -975,6 +1156,10 @@ function startGame() {
   $('icon-pal').classList.remove('cracked', 'binned');
   $('icon-bin').classList.remove('full');
   $('icon-note').hidden = true;
+  asked.clear();
+  if (notifyOn) asked.add('notify');
+  if (fileMode !== 'notepad') asked.add('file');
+  A.setDread(1);
   $('blocker').hidden = true;
   $('cursor').hidden = true;
   $('sticky-note').textContent = C.STICKY.note;

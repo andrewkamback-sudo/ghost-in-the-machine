@@ -36,8 +36,8 @@ test('opening the repaired diary sets WHO and starts Act 2 with stories and the 
   assert.ok(has(cmds, 'file_beat'));
 });
 
-test('Act 2 also starts on player turn 4 or at 2:50', () => {
-  let r = run(offline(), [1, 2, 3, 4].map((i) => ({ type: 'say', text: `hello there number ${i}` })));
+test('Act 2 also starts on player turn 5 or at 2:44', () => {
+  let r = run(offline(), [1, 2, 3, 4, 5].map((i) => ({ type: 'say', text: `hello there number ${i}` })));
   assert.equal(r.state.act, 2);
   r = run(offline(), [{ type: 'tick', dt: T.act2 - T.start }]);
   assert.equal(r.state.act, 2);
@@ -49,10 +49,10 @@ test('CLAIMS.TXT with two stories sets LIAR', () => {
   assert.ok(has(cmds, 'liar_stamp'));
 });
 
-test('two clues at 2:50 fire THE POSSESSION; zero clues fire it at 2:51:30', () => {
+test('two clues at 2:48 fire THE POSSESSION; zero clues fire it at 2:50', () => {
   let r = run(offline(), [{ type: 'repair' }, { type: 'open', id: 'diary' }, { type: 'open', id: 'claims' }]);
-  assert.equal(r.state.act, 2, 'not before 2:50 without demo');
-  r = run(r.state, [{ type: 'tick', dt: T.act2 - T.start }]);
+  assert.equal(r.state.act, 2, 'not before 2:48 without demo');
+  r = run(r.state, [{ type: 'tick', dt: T.gate - T.start }]);
   assert.equal(r.state.act, 3);
   assert.ok(has(r.cmds, 'possession'));
   r = run(offline(), [{ type: 'tick', dt: T.possession - T.start }]);
@@ -149,6 +149,30 @@ test('Wren is trimmed to 20 words at a sentence boundary', async () => {
   const out = cleanWren(long);
   assert.ok(out.split(' ').length <= 20, out);
   assert.equal(out, "defrag isn't maintenance. every night at 3:00 it moves more of me into ▓▓▓.mem. pass 11 of 12 ran tonight.");
+});
+
+test('timed beats fire once, in their acts, and ask for the real haunts in the story', () => {
+  let r = offline();
+  const asks = [];
+  for (let i = 0; i < 9 * 60; i++) {
+    const out = reduce(r, { type: 'tick', dt: 1 });
+    r = out.state;
+    for (const c of out.cmds) if (c.t === 'ask') asks.push(c.id);
+    if (r.act === 3) break;
+  }
+  assert.deepEqual(asks, ['voice', 'notify', 'window', 'camera']);
+  assert.equal(new Set(r.fired).size, r.fired.length);
+});
+
+test('a stalled player gets a hint that points at the next icon', () => {
+  let r = run(offline(), [{ type: 'tick', dt: 30 }]);
+  assert.ok(!r.cmds.some((c) => c.t === 'hint'));
+  r = run(r.state, [{ type: 'tick', dt: 16 }]);
+  const h = r.cmds.find((c) => c.t === 'hint');
+  assert.equal(h.target, 'wren');
+  assert.match(r.cmds.find((c) => c.t === 'pal').text, /repair her diary/);
+  r = run(offline(), [{ type: 'tick', dt: T.act2 - T.start }, { type: 'repair' }, { type: 'open', id: 'diary' }, { type: 'tick', dt: 50 }]);
+  assert.equal(r.cmds.filter((c) => c.t === 'hint').at(-1).target, 'claims');
 });
 
 test('quotes and cut points', () => {

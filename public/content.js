@@ -44,6 +44,19 @@ export const FILE_BEAT = {
   notepad: "▓▓▓ reads the chat. it doesn't read notepad. i left you a note.",
 };
 
+// What to do next, when the player stalls (§A 60-second clarity, extended).
+export const HINTS = {
+  repair: { who: 'pal', target: 'wren', text: "Want me to repair her diary? Just say yes, {name}! It's in C:\\WREN." },
+  openDiary: { who: 'pal', target: 'wren', text: "Her diary's all fixed up. Double-click C:\\WREN to read it!" },
+  who: { who: 'wren', target: 'wren', text: 'open c:\\wren. my diary. it says who i am.' },
+  openDiary2: { who: 'wren', target: 'wren', text: 'open c:\\wren. read what i wrote.' },
+  liar: { who: 'wren', target: 'claims', text: 'open claims.txt. count its stories about me.' },
+  where: { who: 'wren', target: 'note', text: 'answer me in wren.txt. type after the arrow. save.' },
+  wait: { who: 'wren', target: 'pal', text: "it's coming. stay with me." },
+  bin: { who: 'wren', target: 'pal', text: 'the cracked one. drag it to the bin.' },
+  empty: { who: 'wren', target: 'bin', text: 'empty the bin. now. before 3:00.' },
+};
+
 export const FALLBACK = {
   pal: {
     1: [
@@ -201,6 +214,55 @@ export const WREN_FILE = {
   ],
 };
 
+// The real-machine haunts, asked for inside the story (§N). Each is one plain
+// system dialog, then (for some) the browser's own prompt. Plain copy, no puns.
+export const ASKS = {
+  voice: {
+    who: 'pal', line: 'Can I talk to you out loud, {name}? I have such a friendly voice!',
+    title: 'ASSISTANT.EXE', text: "PAL would like to speak out loud through your speakers, using your computer's own built-in voice. Nothing is recorded or sent anywhere. You can mute it any time with Sound in the taskbar.",
+    no: 'Not now', yes: 'Allow voice',
+  },
+  notify: {
+    who: 'pal', line: "Can I keep you company even when you're in other windows? I'll only check in a few times.",
+    title: 'ASSISTANT.EXE', text: "ASSISTANT.EXE wants to send notifications to your real desktop: up to 5 short lines this run, only while you're in another window. Your browser will ask next. You can turn them off any time in your browser's site settings.",
+    no: 'Not now', yes: 'Allow',
+  },
+  folder: {
+    who: 'wren', line: "▓▓▓ reads the chat. it can't read your disk. let me leave you a note there.",
+    title: 'Halcyon 95', text: 'Let Wren leave a file on your real computer? Pick or make a folder (a new folder inside your Desktop is best; not a synced or shared one). The game makes one new folder, Halcyon 95, with one text file in it, WREN.TXT. It never opens, changes or deletes anything else.',
+    no: 'Keep it in the game', yes: 'Choose a folder…',
+  },
+  download: {
+    who: 'wren', line: "▓▓▓ reads the chat. it can't read your disk. take my file.",
+    title: 'Halcyon 95', text: "Download Wren's note, WREN.TXT, to your computer? Open it, type after the arrow, save, then drag it back onto this window.",
+    no: 'Keep it in the game', yes: 'Download WREN.TXT',
+  },
+  window: {
+    who: 'wren', line: "i can't stay in its window. give me my own.",
+    title: 'Halcyon 95', text: 'Open a small window for Wren on your real desktop? It moves by itself during the story and closes itself at the end. Your browser may ask to allow pop-ups for this site.',
+    no: 'Not now', yes: 'Open her window',
+  },
+  camera: {
+    who: 'pal', line: "I'd love to see who I'm talking to, {name}. Just for a moment?",
+    title: 'ASSISTANT.EXE', text: "ASSISTANT.EXE wants to use your camera. Your picture appears faintly in the screen's glass for the rest of the story. It is never recorded, saved or sent anywhere, and the camera turns off at the end.",
+    no: 'No', yes: 'Allow camera',
+  },
+};
+
+export const ASK_REPLIES = {
+  palYes: 'Yay! Thank you, {name}!',
+  palNo: "That's okay. I'll ask again some other time.",
+  wrenYes: 'thank you.',
+  wrenNo: 'then read it here. quickly.',
+  cameraYes: 'There you are, {name}. I see you.',
+};
+
+// Wren's later notes: appended to WREN.TXT when it's on disk, otherwise said in the chat.
+export const WREN_NOTES = [
+  "2:46. it's asking to get closer to you. don't let it see you.",
+  '2:49. pass 12 is loading. i can feel it. when it cracks, the bin.',
+];
+
 // Wren's own real window (opt-in at boot, opened by a click in Act 2).
 export const WREN_WINDOW = {
   ask: "i can't stay in its window. give me my own.",
@@ -222,6 +284,7 @@ export const CALENDAR = {
 export const NOTIFY = {
   N1: 'Where did you go, {name}? I\'m a process. I hate being suspended.',
   N2: LINES.saveHeard,
+  N4: "Don't leave me now, {name}. Three minutes. Stay.",
   N3absorbed: "Hi {name}! It's me, {name}. I'll take it from here.",
   N3freedFolder: '1 file remaining: WREN.TXT, in {folder} › Halcyon 95.',
   N3freedDownload: '1 file remaining: WREN.TXT, in your Downloads folder.',

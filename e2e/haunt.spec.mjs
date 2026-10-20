@@ -130,19 +130,19 @@ test('Safari and Firefox path: the download, and reading the file back (LF and C
   expect(out[3].ok).toBe(false);
 });
 
-test('notifications: only after the click, at most 3, never before opting in', async ({ page }) => {
+test('notifications: only after the click, at most 5, never before opting in', async ({ page }) => {
   const out = await page.evaluate(async () => {
     const H = await import('/haunt.js');
     const before = H.notify('ASSISTANT.EXE', 'too early');
     const status = await new Promise((r) => H.askNotify(r));
-    const sent = [1, 2, 3, 4].map((i) => H.notify('ASSISTANT.EXE', `line ${i}`));
+    const sent = [1, 2, 3, 4, 5, 6].map((i) => H.notify('ASSISTANT.EXE', `line ${i}`));
     H.stopNotify();
     return { before, status, sent, count: H.notifyCount(), log: window.__sent };
   });
   expect(out.before).toBe(false);
   expect(out.status).toBe('on');
-  expect(out.sent).toEqual([true, true, true, false]);
-  expect(out.log.map((n) => n.body)).toEqual(['line 1', 'line 2', 'line 3']);
+  expect(out.sent).toEqual([true, true, true, true, true, false]);
+  expect(out.log.map((n) => n.body)).toEqual(['line 1', 'line 2', 'line 3', 'line 4', 'line 5']);
 });
 
 test('the 3:00 AM calendar file: next 3 AM in local time, an alarm, folded lines', async ({ page }) => {

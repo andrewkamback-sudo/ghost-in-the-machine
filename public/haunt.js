@@ -5,15 +5,18 @@
 import { WREN_HEADER } from './content.js';
 
 const MAX = 16 * 1024;
+const MAX_WRITES = 6; // the note, up to 2 more notes from Wren, her reply, the epilogue
 
 export const support = {
   framed: window.top !== window,
   notify: 'Notification' in window,
   folder: typeof window.showDirectoryPicker === 'function',
+  camera: !!navigator.mediaDevices?.getUserMedia,
 };
 
 // ---------- Notifications (PAL's channel) ----------
 
+const MAX_NOTIFY = 5;
 let notifyOptIn = false;
 let sent = 0;
 let current = null;
@@ -37,7 +40,7 @@ export function askNotify(onStatus) {
 }
 
 export function notify(title, body) {
-  if (!notifyOptIn || sent >= 3 || Notification.permission !== 'granted') return false;
+  if (!notifyOptIn || sent >= MAX_NOTIFY || Notification.permission !== 'granted') return false;
   try {
     if (current) current.close();
     current = new Notification(title, { body });
@@ -149,7 +152,7 @@ const STOP_LINES = {
 // write: 1 = the note (may create), 2 = Wren's reply, 3 = the epilogue.
 // Returns { ok } or { ok: false, reason, line, moved }.
 export async function writeWren(step, text, againText) {
-  if (!disk.root || disk.stopped || disk.writes >= 3) return { ok: false, reason: disk.stopped || 'none' };
+  if (!disk.root || disk.stopped || disk.writes >= MAX_WRITES) return { ok: false, reason: disk.stopped || 'none' };
   try {
     const { h, existed } = await wrenHandle(step === 1);
     await append(h, step === 1 && existed ? '\n' + againText : text);
@@ -321,11 +324,12 @@ export async function wrenWindowSay(text, { pal = false } = {}) {
 export function wrenWindowTitle(t) { if (wrenOpen()) wrenWin.document.title = t; }
 
 // THE POSSESSION: her window shudders and crawls toward the game, then is pulled back.
-export async function wrenWindowDrift({ calm = false } = {}) {
+export async function wrenWindowDrift({ calm = false, small = false } = {}) {
   if (!wrenOpen()) return;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const from = { x: wrenWin.screenX, y: wrenWin.screenY };
-  const to = { x: window.screenX + window.outerWidth / 2 - 160, y: window.screenY + window.outerHeight / 2 - 110 };
+  const full = { x: window.screenX + window.outerWidth / 2 - 160, y: window.screenY + window.outerHeight / 2 - 110 };
+  const to = small ? { x: from.x + (full.x - from.x) * 0.25, y: from.y + (full.y - from.y) * 0.25 } : full;
   const steps = calm ? 3 : 24;
   try {
     for (let i = 1; i <= steps; i++) {
@@ -341,6 +345,33 @@ export async function wrenWindowDrift({ calm = false } = {}) {
 export function closeWrenWindow(afterMs = 0) {
   if (!wrenOpen()) return;
   setTimeout(() => { try { wrenWin.close(); } catch {} }, afterMs);
+}
+
+// ---------- The camera reflection (opt-in; shown only, never recorded or sent) ----------
+
+let camStream = null;
+
+// Call from a click. Shows the camera in `video`; nothing is recorded, uploaded or kept.
+export async function startCamera(video) {
+  if (!navigator.mediaDevices?.getUserMedia) return false;
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240, facingMode: 'user' }, audio: false });
+    video.srcObject = camStream;
+    await video.play().catch(() => {});
+    return true;
+  } catch {
+    camStream = null;
+    return false;
+  }
+}
+
+export const cameraOn = () => !!camStream;
+
+// Turns the camera (and its light) off.
+export function stopCamera(video) {
+  for (const t of camStream?.getTracks() ?? []) t.stop();
+  camStream = null;
+  if (video) video.srcObject = null;
 }
 
 // ---------- The end-card manifest ----------

@@ -64,7 +64,7 @@
           <div id="consent-buttons">
             <div class="consent-row">
               <div class="field-row"><button id="btn-notify" type="button">Allow notifications</button><span id="st-notify" class="status">off</span></div>
-              <details class="small"><summary>Up to 3 notifications, only while you're in another window.</summary>
+              <details class="small"><summary>Up to 5 notifications, only while you're in another window.</summary>
                 <p>Your browser asks first. You can turn them off any time in your browser's site settings.</p></details>
             </div>
             <div class="consent-row" id="row-folder">
@@ -87,6 +87,7 @@
               <details class="small"><summary>One small window for Wren on your real desktop.</summary>
                 <p>Partway through, a button opens one small window for Wren on your real desktop. It moves on its own during the story and closes itself at the end. Your browser may ask to allow pop-ups for this site.</p></details>
             </div>
+            <p class="small"><b>Or decide later:</b> PAL and Wren will ask for each of these, and for voice and your camera, at the moment it matters. Every one is optional.</p>
             <p class="small"><b>Calendar:</b> at the end, a button can save one 3:00 AM reminder for your calendar. Nothing is added unless you open the file, and you can delete the event any time.</p>
           </div>
           <p id="boot-privacy-file" class="small muted" hidden></p>
@@ -154,11 +155,13 @@
       <div id="taskbar">
         <span class="tb-brand">Halcyon 95</span>
         <span class="tray">
+          <input type="checkbox" id="sound-tray" checked><label for="sound-tray">Sound</label>
           <input type="checkbox" id="calm-tray"><label for="calm-tray">Calm</label>
           <span id="clock" class="clock">2:48:07 AM</span>
         </span>
       </div>
 
+      <video id="cam" muted playsinline aria-hidden="true"></video>
       <div id="static"></div>
       <div id="cursor" hidden></div>
       <div id="blocker" hidden></div>

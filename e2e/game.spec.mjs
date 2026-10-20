@@ -1,10 +1,26 @@
 // A full offline run to FREED, keyboard only, in every engine on every OS.
 import { test, expect } from '@playwright/test';
 
+// The story asks for the real-machine haunts as it goes (voice, notifications, a file,
+// a window, the camera). This player says no to each, like a cautious player would.
+function declineAsks(page) {
+  const timer = setInterval(() => {
+    page.evaluate(() => {
+      const d = document.getElementById('dialog');
+      const title = document.getElementById('dialog-title')?.textContent;
+      if (!d?.open || title === 'Confirm' || !d.matches(':modal')) return;
+      const first = d.querySelector('#dialog-buttons button');
+      if (first && !first.disabled && first.textContent !== 'OK') first.click();
+    }).catch(() => {});
+  }, 250);
+  return () => clearInterval(timer);
+}
+
 test('boot to FREED offline, by keyboard', async ({ page }) => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto('/?demo=1&offline=1');
+  const stop = declineAsks(page);
 
   await page.keyboard.press('Space'); // skip the BIOS screen
   await page.locator('#name').fill('José');
@@ -52,5 +68,6 @@ test('boot to FREED offline, by keyboard', async ({ page }) => {
   const [ics] = await Promise.all([page.waitForEvent('download'), page.locator('#end-cal').click()]);
   expect(ics.suggestedFilename()).toBe('wren-3am.ics');
   await expect(page.locator('#end-manifest')).toContainText('her 3:00 AM event');
+  stop();
   expect(errors).toEqual([]);
 });
