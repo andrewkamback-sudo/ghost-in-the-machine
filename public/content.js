@@ -268,6 +268,7 @@ export const WREN_WINDOW = {
   ask: "i can't stay in its window. give me my own.",
   button: 'Open her window',
   blocked: 'Her window was blocked by your browser. Play on; she stays in the chat.',
+  pointer: '▓ (she wrote in her own window) ▓',
   freed: 'thank you. you can turn it off now.',
   absorbed: "Hi {name}! She's gone. This window is mine now.",
 };

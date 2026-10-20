@@ -295,8 +295,12 @@ let wrenWin = null;
 // Call from a click. Returns false if the browser blocked it.
 export function openWrenWindow() {
   const w = 320, h = 220;
-  const left = (screen.availLeft ?? 0) + screen.availWidth - w - 40;
-  const top = (screen.availTop ?? 0) + 60;
+  // Beside the game window when there's room, else over its top-right corner; always inside the screen.
+  const sx = screen.availLeft ?? 0, sy = screen.availTop ?? 0;
+  const right = window.screenX + window.outerWidth + 8;
+  const want = right + w <= sx + screen.availWidth ? right : window.screenX + window.outerWidth - w - 24;
+  const left = Math.max(sx, Math.min(want, sx + screen.availWidth - w));
+  const top = Math.max(sy, Math.min(window.screenY + 80, sy + screen.availHeight - h));
   wrenWin = window.open('wren.html', 'wren', `popup,width=${w},height=${h},left=${left},top=${top}`);
   return !!wrenWin;
 }

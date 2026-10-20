@@ -45,7 +45,8 @@ function dispatch(ev) {
   const r = D.reduce(S, ev);
   S = r.state;
   // THE POSSESSION takes the whole real screen when the player's own click set it off (Esc exits).
-  if (before !== 3 && S.act === 3 && navigator.userActivation?.isActive && !player.calm) {
+  // Skipped while her window is open: on macOS fullscreen moves the game to its own Space and hides her window.
+  if (before !== 3 && S.act === 3 && navigator.userActivation?.isActive && !player.calm && !H.hasWrenWindow()) {
     document.documentElement.requestFullscreen?.().catch(() => {});
   }
   queue.push(...r.cmds);
@@ -155,9 +156,10 @@ async function say(who, text, { cut = null, quote = null, history = true } = {})
     if (cut == null) await sleep(300 / SPEED);
   } else if (who === 'wren') {
     const p = line('wren');
-    if (H.hasWrenWindow()) H.wrenWindowSay(text);
     A.speak('wren', text.replace(/▓+/g, 'pal'));
-    await typeInto(p, text, { cps: 30, stutter: true });
+    // Once she has her own window she talks there; the chat only points at it.
+    if (H.hasWrenWindow()) { H.wrenWindowSay(text); A.staticBurst(0.25, 0.08); p.textContent = C.WREN_WINDOW.pointer; }
+    else await typeInto(p, text, { cps: 30, stutter: true });
     announce(`Red text: ${text}`);
   } else {
     const p = line('sys');
@@ -1084,6 +1086,7 @@ function setStatus(id, status) {
   el.classList.toggle('on', status === 'on');
 }
 
+$('btn-sound').addEventListener('click', () => { A.unlock(); A.chime(); });
 $('btn-notify').addEventListener('click', () => {
   H.askNotify((st) => { notifyOn = st === 'on'; setStatus('st-notify', st); });
 });

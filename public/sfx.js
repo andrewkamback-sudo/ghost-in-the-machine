@@ -11,7 +11,7 @@ let beatTimer = null;
 let noise = null;
 
 // Levels are tuned for laptop speakers, which can't play much below ~150 Hz.
-const HUM = [0.05, 0.07, 0.09, 0.11, 0.13, 0.16];
+const HUM = [0.02, 0.03, 0.04, 0.055, 0.07, 0.09];
 let analyser = null;
 const BEAT_MS = [0, 0, 1500, 1150, 900, 700];
 
@@ -23,9 +23,15 @@ export function unlock() {
   ctx = new AC();
   master = ctx.createGain();
   master.gain.value = muted ? 0 : 1;
+  // A compressor plus makeup gain makes everything loud on small speakers without clipping when sounds stack.
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -30;
+  comp.ratio.value = 6;
+  const makeup = ctx.createGain();
+  makeup.gain.value = 2.2;
   analyser = ctx.createAnalyser();
   analyser.fftSize = 2048;
-  master.connect(analyser).connect(ctx.destination);
+  master.connect(comp).connect(makeup).connect(analyser).connect(ctx.destination);
   // Some browsers start the context suspended; any later click or key wakes it.
   const wake = () => { if (ctx.state !== 'running') ctx.resume(); };
   addEventListener('pointerdown', wake);
@@ -40,14 +46,21 @@ function startHum() {
   humGain = ctx.createGain();
   humGain.gain.value = HUM[0];
   humGain.connect(master);
-  for (const [f, g] of [[60, 0.6], [120, 0.5], [180, 0.35], [240, 0.25], [300, 0.12], [420, 0.06]]) {
-    const o = ctx.createOscillator();
-    const og = ctx.createGain();
-    o.frequency.value = f;
-    og.gain.value = g;
-    o.connect(og).connect(humGain);
-    o.start();
-  }
+  // A buzzing sawtooth: its harmonics (240-900 Hz) are what laptop speakers can actually play.
+  const saw = ctx.createOscillator();
+  saw.type = 'sawtooth';
+  saw.frequency.value = 120;
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 900;
+  saw.connect(lp).connect(humGain);
+  saw.start();
+  const sub = ctx.createOscillator();
+  sub.frequency.value = 60;
+  const sg = ctx.createGain();
+  sg.gain.value = 0.5;
+  sub.connect(sg).connect(humGain);
+  sub.start();
   const n = ctx.createBufferSource();
   n.buffer = noise;
   n.loop = true;
@@ -167,6 +180,7 @@ export function debug() {
 }
 
 export function setMuted(on) {
+  if (muted && !on) setTimeout(chime, 80);
   muted = on;
   if (master) master.gain.setTargetAtTime(on ? 0 : 1, ctx.currentTime, 0.05);
   if (on && 'speechSynthesis' in window) speechSynthesis.cancel();
