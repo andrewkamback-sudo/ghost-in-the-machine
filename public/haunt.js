@@ -300,16 +300,19 @@ export function openWrenWindow() {
   const left = window.screenX + window.outerWidth + 8;
   const top = window.screenY + 80;
   wrenWin = window.open('wren.html', 'wren', `popup,width=${w},height=${h},left=${left},top=${top}`);
+  // Brave ignores the size and place asked for in open(), but honours these once her page has loaded.
+  wrenDoc().then((doc) => { if (doc) { wrenWin.resizeTo(w, h); wrenWin.moveTo(left, top); } }).catch(() => {});
   return !!wrenWin;
 }
 
 const wrenOpen = () => wrenWin && !wrenWin.closed;
 export const hasWrenWindow = () => !!wrenOpen();
 
+// Her page, once loaded (a new window first holds a blank page that is already 'complete').
+const wrenReady = () => wrenOpen() && wrenWin.document.readyState === 'complete' && !!wrenWin.document.getElementById('lines');
 async function wrenDoc() {
-  if (!wrenOpen()) return null;
-  for (let i = 0; i < 40 && wrenWin.document.readyState !== 'complete'; i++) await new Promise((r) => setTimeout(r, 50));
-  return wrenWin.document.getElementById('lines') ? wrenWin.document : null;
+  for (let i = 0; i < 40 && wrenOpen() && !wrenReady(); i++) await new Promise((r) => setTimeout(r, 50));
+  return wrenReady() ? wrenWin.document : null;
 }
 
 // Text reaches her window only through textContent.
