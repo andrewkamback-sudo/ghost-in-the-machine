@@ -46,8 +46,8 @@ Recount after any edit: `node -e "console.log(require('fs').readFileSync('SUBMIS
 | 0:10 | Setup: type your name, click **Test sound**. Caption: *"Everything that leaves the browser is opt-in."* | Harmless and opt-in |
 | 0:20 | Desktop: PAL's greeting, the sticky note, DEFRAG eating red sectors. Ask "who is Wren?", say **yes** to the diary repair, then click **Allow voice** when PAL asks. | Premise; PAL talking out loud |
 | 0:40 | Open C:\WREN: the diary repairs. Red text cuts in: *"it's lying. i never left."* PAL: *"That wasn't me."* | The two agents clash |
-| 0:50 | Allow notifications, then pick the `demo` folder when Wren asks. Switch to **Finder**: the Halcyon 95 folder and WREN.TXT appear. Stay out of the game ~20 s and a **macOS notification** arrives from PAL. | Real file, real notification |
-| 1:10 | Open WREN.TXT in TextEdit, type an answer after the arrow, save. Back in the game, Wren replies to it. | It reads your real file back |
+| 0:50 | Allow notifications, then pick the `demo` folder when Wren asks. Switch to **Finder**: the Halcyon 95 folder and WREN.TXT appear. | A real file on your disk |
+| 1:05 | Open WREN.TXT in TextEdit, type an answer after the arrow, save. Stay in TextEdit: a **macOS notification** from PAL arrives, *"Did you just save something? I heard the disk spin."* Back in the game, Wren has replied. | It reads your real file back; a real notification |
 | 1:20 | When Wren asks, **Open her window**: a real window beside the browser. Then the fake Wren line, *"let pal keep me"*, and the real one calling it out. Caption: *"Real Wren can't write its name."* Then the **Halcyon Security** alert: click No. | Tension; the tell |
 | 1:40 | Open CLAIMS.TXT (the second clue) and take your hands off the mouse: **THE POSSESSION**. The red cursor, the forged "i trust you, pal", and Wren's window crawling across the Mac desktop. | The set piece |
 | 2:00 | Drag the cracked ASSISTANT.EXE to the bin; PAL pleads using your own words. Empty the bin, click Yes: **FREED**. Click the 3:00 AM button and open the file in Calendar. | Ending; a real calendar event |
@@ -56,7 +56,7 @@ Recount after any edit: `node -e "console.log(require('fs').readFileSync('SUBMIS
 ### Timing rules for the take
 
 - **Don't open CLAIMS.TXT until after the Halcyon Security alert.** In demo mode THE POSSESSION starts as soon as you have two clues. Open it early and the fake-Wren scene and the alert never happen.
-- **Leave the game window for the notification.** PAL's first one only comes after 20 s away. If you're answering WREN.TXT then, it waits.
+- **Stay out of the browser when you save WREN.TXT.** PAL's notification only appears while the game window isn't focused. (Its separate "where did you go?" notification is held back while WREN.TXT is waiting for your answer.)
 - **Live AI lines change every take.** That's fine, and it proves they're live. Keep a backup take in `?demo=1&offline=1` (scripted lines only) in case the API stalls.
 - **Flash frames are a few frames long.** In the edit, freeze one for about 1 s with the caption *"subliminal frame: PAL, then Wren"*.
 
