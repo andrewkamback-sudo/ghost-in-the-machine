@@ -295,12 +295,10 @@ let wrenWin = null;
 // Call from a click. Returns false if the browser blocked it.
 export function openWrenWindow() {
   const w = 320, h = 220;
-  // Beside the game window when there's room, else over its top-right corner; always inside the screen.
-  const sx = screen.availLeft ?? 0, sy = screen.availTop ?? 0;
-  const right = window.screenX + window.outerWidth + 8;
-  const want = right + w <= sx + screen.availWidth ? right : window.screenX + window.outerWidth - w - 24;
-  const left = Math.max(sx, Math.min(want, sx + screen.availWidth - w));
-  const top = Math.max(sy, Math.min(window.screenY + 80, sy + screen.availHeight - h));
+  // Just right of the game window. The browser keeps new windows on the real screen, so this
+  // doesn't use the page's screen size, which Brave fakes to block fingerprinting.
+  const left = window.screenX + window.outerWidth + 8;
+  const top = window.screenY + 80;
   wrenWin = window.open('wren.html', 'wren', `popup,width=${w},height=${h},left=${left},top=${top}`);
   return !!wrenWin;
 }
