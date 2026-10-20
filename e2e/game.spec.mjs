@@ -97,8 +97,14 @@ test('sound: the end card fades the hum to silence', async ({ page }) => {
   await page.waitForTimeout(1000);
   await page.evaluate(async () => (await import('/sfx.js')).fadeOut(0.4));
   await page.waitForTimeout(1500);
-  const off = await page.evaluate(async () => (await import('/sfx.js')).debug());
-  expect(off.rms).toBeLessThan(0.01);
+  // The quietest of several samples: DEFRAG's brief seek clicks keep playing mid-game, the hum must not.
+  const off = await page.evaluate(async () => {
+    const { debug } = await import('/sfx.js');
+    const rms = [];
+    for (let i = 0; i < 8; i++) { rms.push(debug().rms); await new Promise((r) => setTimeout(r, 70)); }
+    return Math.min(...rms);
+  });
+  expect(off).toBeLessThan(0.01);
 });
 
 test('Start menu opens files, and Shut Down is refused', async ({ page }) => {
