@@ -32,13 +32,23 @@ Without asking, it also takes over the browser tab itself: the title and favicon
 
 The game never deletes anything, only ever writes to WREN.TXT inside the folder it made, and never touches anyone else's device. The end card lists exactly what it left behind.
 
+## Who's lying?
+
+Both voices claim the other one is the problem. PAL says the red text is a corrupted copy wearing Wren's name, and Wren gives cold orders like a virus would. To make it harder, PAL sometimes writes in Wren's red lowercase to post fake Wren lines, put a split-second fake flash on screen, or raise a "Halcyon Security" alert asking you to quarantine her. There is one tell that always gives PAL away; a torn diary page explains it, if you find it.
+
+## On the haunted desktop
+
+- **DEFRAG.EXE** runs in the corner the whole time, a live grid of Wren's red sectors turning into PAL.MEM blue, pass 11 of 12, with disk-seek clicks. It can't be stopped, and it says what's running it.
+- **Lost diary pages** flicker onto the desktop through the night. Each one is a piece of Wren's story and points at a clue.
+- **Flash frames:** the screen flickers, and a split-second full-screen frame shows PAL's face-off with Wren, with Wren naming your next step. Calm mode (in the tray, and on by default if your system asks for reduced motion) replaces the flashes with a line in the chat title.
+
 ## Start menu
 
 The taskbar's **Start** button opens a working menu with shortcuts to the desktop files. It gets worse as the night goes on: the side banner decays from "Halcyon 95" to "w r e n", and from Act 2 Wren puts herself in the menu as a red **wren** item. **Shut Down...** is refused because ASSISTANT.EXE is preventing shutdown, and PAL begs you to stay. **Help** offers PAL, and later Wren answers instead.
 
 ## Sound
 
-All sound is made live with Web Audio; there are no sound files. A CRT buzz rises with the dread, a heartbeat starts once Wren breaks in, and stings, static and clicks mark the scares. It fades to silence on the end card and stops when you close the tab.
+All sound is made live with Web Audio; there are no sound files. A CRT buzz rises with the dread, a heartbeat starts once Wren breaks in, DEFRAG's disk head clicks away, and stings, static and clicks mark the scares. It fades to silence on the end card and stops when you close the tab.
 
 - **Test sound** on the second boot screen plays a chime, so you know it's working before you start.
 - **Sound** in the taskbar tray, or the M key, turns it all on or off.
