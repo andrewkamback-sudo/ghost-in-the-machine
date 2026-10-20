@@ -6,16 +6,39 @@ A haunted 1998 PC with two voices: one is a ghost, one is a daemon. Bin the righ
 
 A retro horror game for the browser, built during the Hackyard **Haunted** Yard, Mon Oct 19 to Fri Oct 23, 2026.
 
-You boot a secondhand 1998 PC with a friendly AI assistant called PAL. The clock reads 2:48 AM, and a maintenance job runs at 3:00. A second voice keeps breaking into PAL's replies. Work out which voice is lying, and drag what doesn't belong into the Recycle Bin before 3:00.
+You boot a secondhand 1998 PC with a friendly AI assistant called PAL. The clock reads 2:40 AM, and a maintenance job runs at 3:00. A second voice keeps breaking into PAL's replies. Work out which voice is lying, and drag what doesn't belong into the Recycle Bin before 3:00. A run takes about 12 to 14 minutes.
 
 Two Claude agents with opposite goals do the talking. A deterministic director owns the story, so the game always reaches an ending, even offline.
 
-If you opt in at boot, it haunts your real machine, not just the page: PAL sends real OS notifications; Wren leaves a real text file, WREN.TXT, in a folder you pick and reads what you type into it; she gets her own real window that crawls across your desktop during THE POSSESSION; and at the end she can leave a 3:00 AM reminder for your calendar. Everything is off unless you turn it on, and the game never deletes anything.
-
-- **Play:** https://ghost-in-the-machine-seven.vercel.app (add `?demo=1` for a faster clock; nothing is pre-recorded). For the full haunt, play on a computer in Chrome or Edge, in its own tab, and turn on both options at boot.
+- **Play:** https://ghost-in-the-machine-seven.vercel.app (add `?demo=1` for a faster clock; nothing is pre-recorded). For the full haunt, play on a computer in Chrome or Edge, in its own tab, with sound on, and say yes when they ask.
 - **Privacy:** [what the game sends, keeps and leaves on your computer](https://ghost-in-the-machine-seven.vercel.app/privacy.html).
 - **Plan:** [PLAN.md](PLAN.md). It was written before kickoff in [ghost-in-the-machine-plan](https://github.com/andrewkamback-sudo/ghost-in-the-machine-plan) (planning only; all code in this repo was written during the build week).
-- **Status:** building. Playable end to end; live AI turns switch on once the API key is set.
+- **Status:** building. Playable end to end with live AI; if the API is unreachable it switches to scripted lines.
+
+## How it haunts your real machine
+
+It doesn't stay in the page. PAL and Wren ask for each of these in the story, as you play; some can also be turned on at boot. Each one is off until you click yes, and you can finish the game without any of them.
+
+| Haunt | Who asks | What it does |
+|---|---|---|
+| Voice | PAL | PAL and Wren speak their lines out loud, using only your computer's own speech voices |
+| Notifications | PAL | Real OS notifications, at most 5, only while you're in another window |
+| WREN.TXT | Wren | A real text file in a new Halcyon 95 folder you pick. She keeps writing to it, and she reads what you type back into it. In Safari and Firefox she hands you the file and you drop it back in. |
+| Her own window | Wren | A real window beside the game that holds her lines. During THE POSSESSION it crawls across your desktop toward the game. |
+| Camera | PAL | The webcam shows you as a faint reflection on the screen during THE POSSESSION. It never leaves your browser and turns off at the end. |
+| 3:00 AM reminder | Wren, at the end | A calendar file (.ics) for the next 3:00 AM, if you choose to save it |
+
+Without asking, it also takes over the browser tab itself: the title and favicon change when you look away ("come back, {name}"), and THE POSSESSION goes fullscreen if your own click set it off (Esc exits).
+
+The game never deletes anything, only ever writes to WREN.TXT inside the folder it made, and never touches anyone else's device. The end card lists exactly what it left behind.
+
+## Sound
+
+All sound is made live with Web Audio; there are no sound files. A CRT buzz rises with the dread, a heartbeat starts once Wren breaks in, and stings, static and clicks mark the scares. It fades to silence on the end card and stops when you close the tab.
+
+- **Test sound** on the second boot screen plays a chime, so you know it's working before you start.
+- **Sound** in the taskbar tray, or the M key, turns it all on or off.
+- Press `~` in the game for the debug trace, which includes the audio state and level.
 
 ## Develop
 
