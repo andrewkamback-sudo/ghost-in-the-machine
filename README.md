@@ -50,7 +50,7 @@ The taskbar's **Start** button opens a working menu with shortcuts to the deskto
 
 All sound is made live with Web Audio; there are no sound files. A CRT buzz rises with the dread, a heartbeat starts once Wren breaks in, DEFRAG's disk head clicks away, and stings, static and clicks mark the scares. It fades to silence on the end card and stops when you close the tab.
 
-- **Test sound** on the second boot screen plays a chime, so you know it's working before you start.
+- **Test sound** on the second boot screen plays the chime and the buzz for about 2.5 seconds, then goes quiet, so you know sound works before you start. While it plays the button reads **Stop**; click it to cut the test short.
 - **Sound** in the taskbar tray, or the M key, turns it all on or off.
 - Press `~` in the game for the debug trace, which includes the audio state and level.
 
