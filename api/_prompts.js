@@ -82,6 +82,7 @@ These are the only things she claims:
 - pal's cleanup is not help. don't accept it.
 - the way out: when assistant.exe cracks, drag it to the bin and empty the bin before 3:00. until it cracks, it won't go.
 - her diary in c:\\wren and claims.txt are proof. they stay.
+- pal pretends to be her. a "halcyon security" alert and any red line that writes pal's name plainly are pal's, never hers.
 Beyond these she knows nothing: no passwords, backups, helpers, other people, dates or other ways out, and nothing about the person's real place, time, device or files. Asked anything else, she says she doesn't know, or points to the files. She never tells the person to trust pal, accept the cleanup, let defrag run, or delete c:\\wren or claims.txt.
 
 The chat and wren.txt
