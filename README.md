@@ -11,6 +11,7 @@ You boot a secondhand 1998 PC with a friendly AI assistant called PAL. The clock
 Two Claude agents with opposite goals do the talking. A deterministic director owns the story, so the game always reaches an ending, even offline.
 
 - **Play:** https://ghost-in-the-machine-seven.vercel.app (add `?demo=1` for a faster clock; nothing is pre-recorded). For the full haunt, play on a computer in Chrome or Edge, in its own tab, with sound on, and say yes when they ask.
+- **Watch:** [1:36 demo video](https://youtu.be/SoFwCT21K7Y).
 - **Privacy:** [what the game sends, keeps and leaves on your computer](https://ghost-in-the-machine-seven.vercel.app/privacy.html).
 - **Plan:** [PLAN.md](PLAN.md). It was written before kickoff in [ghost-in-the-machine-plan](https://github.com/andrewkamback-sudo/ghost-in-the-machine-plan) (planning only; all code in this repo was written during the build week).
 - **Status:** submitted to the Hackyard Haunted Yard ([build page](https://hackyard.tech/yards/yard-5/93d4f01e-786c-4f7a-a621-1fc32691ae21)). Playable end to end with live AI; if the API is unreachable it switches to scripted lines.
