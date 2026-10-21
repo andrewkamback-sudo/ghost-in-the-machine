@@ -217,6 +217,6 @@ body.wait, body.wait * { cursor: wait !important; }
 
 /* A split-second frame over the game screen (one at a time, under 3 a second; never in calm mode),
    sized in the screen's own 512x384 pixels so the longest line fits at any zoom. */
-#flash { position: absolute; inset: 0; z-index: 1000; pointer-events: none; display: grid; place-items: center; text-align: center; padding: 24px; }
+#flash { position: absolute; inset: 0; z-index: 1000; pointer-events: none; display: grid; place-items: center; text-align: center; padding: 24px; overflow-wrap: anywhere; }
 #flash.pal { background: navy; color: #fff; font: 700 40px/1.1 "Pixelated MS Sans Serif", sans-serif; }
 #flash.wren { background: #050005; color: var(--wren-dark); font: 60px/0.95 "VT323", monospace; text-shadow: 2px 0 var(--blood); }

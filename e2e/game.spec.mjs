@@ -172,28 +172,34 @@ test('booting while Test sound is still playing keeps the game hum on', async ({
   expect(a.rms).toBeGreaterThan(0.005);
 });
 
-test('flash frames fit their text inside the game screen', async ({ page }) => {
+test('every flash frame fits its text inside the game screen', async ({ page }) => {
   await page.setViewportSize({ width: 1728, height: 1000 }); // a 16-inch MacBook, where the old sizing overflowed
-  await page.goto('/?offline=1&nopost=1&demo=1');
+  await page.goto('/?offline=1&nopost=1');
   await page.locator('#name').fill('Sam');
   await page.locator('#name').press('Enter');
   await page.locator('#setup-next').click();
   await page.getByRole('button', { name: 'OK', exact: true }).click();
-  const stop = declineAsks(page);
-  // Each frame shows for a split second, so measure it in the page the moment it appears.
-  await page.evaluate(() => {
-    window.flashes = [];
+  // Show every line the game can flash, during the screen flicker it always runs with, and measure each one.
+  const clipped = await page.evaluate(async () => {
+    const { FLASH } = await import('/content.js');
+    const lines = [
+      ...FLASH.pal.map((t) => ['pal', t.replace('{NAME}', 'W'.repeat(16))]), // the longest, widest name allowed
+      ...[...FLASH.fake, ...Object.values(FLASH.wren)].map((t) => ['wren', t]),
+    ];
     const f = document.getElementById('flash');
-    new MutationObserver(() => requestAnimationFrame(() => {
-      if (f.hidden) return;
+    const screen = document.getElementById('screen');
+    screen.classList.add('flicker');
+    const out = [];
+    for (const [kind, text] of lines) {
+      f.className = kind;
+      document.getElementById('flash-text').textContent = text;
+      f.hidden = false;
       const t = document.getElementById('flash-text').getBoundingClientRect();
-      const s = document.getElementById('screen').getBoundingClientRect();
-      window.flashes.push({ kind: f.className, inside: t.top >= s.top && t.bottom <= s.bottom && t.left >= s.left && t.right <= s.right });
-    })).observe(f, { attributes: true, childList: true, subtree: true });
+      const s = screen.getBoundingClientRect();
+      if (t.top < s.top || t.bottom > s.bottom || t.left < s.left || t.right > s.right) out.push(text);
+    }
+    f.hidden = true;
+    return out;
   });
-  await page.waitForFunction(() => window.flashes.some((x) => x.kind === 'wren'), null, { timeout: 60000 });
-  stop();
-  const seen = await page.evaluate(() => window.flashes);
-  expect(seen.map((x) => x.kind)).toEqual(expect.arrayContaining(['pal', 'wren']));
-  expect(seen.filter((x) => !x.inside)).toEqual([]);
+  expect(clipped).toEqual([]);
 });
