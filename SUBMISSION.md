@@ -8,6 +8,27 @@ Edits are allowed until judging starts, **Fri Oct 23, 18:00 UTC (2 PM ET)**. Sti
 - [ ] No play link; add https://ghost-in-the-machine-seven.vercel.app as the demo.
 - [ ] Add the demo video, if one is recorded.
 
+### Messages to the organizers (drafts, not sent)
+
+Send after the video is recorded, then replace `[video link]`. Either one works.
+
+**DM to @HackyardSocial:**
+
+```text
+Hi! I submitted Ghost in the Machine to Yard #5 (Haunted): https://hackyard.tech/yards/yard-5/93d4f01e-786c-4f7a-a621-1fc32691ae21
+The FAQ says entries can be edited while the Yard is live, but I can't find an edit button. Could you help with:
+1. The title shows as "One"; it should be "Ghost in the Machine: ASSISTANT.EXE"
+2. Please add the playable demo link: https://ghost-in-the-machine-seven.vercel.app
+3. Please add my demo video: [video link]
+Thanks!
+```
+
+**Public reply, if DMs are closed** (258 characters with the video link; X counts a link as 23):
+
+```text
+@HackyardSocial Hi! My Yard #5 entry shows the title "One" and I can't find an edit button. Could you rename it to "Ghost in the Machine: ASSISTANT.EXE" and add the demo link ghost-in-the-machine-seven.vercel.app and my video [video link]? Thanks!
+```
+
 ## Write-up (474 / 500 characters)
 
 ```text
