@@ -203,3 +203,10 @@ test('every flash frame fits its text inside the game screen', async ({ page }) 
   });
   expect(clipped).toEqual([]);
 });
+
+test('the BIOS screen is black, not 98.css white', async ({ page }) => {
+  await page.goto('/?offline=1');
+  await expect(page.locator('#post')).toBeVisible();
+  const bg = await page.locator('#post-text').evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(bg).toBe('rgba(0, 0, 0, 0)'); // transparent over #post's black
+});
