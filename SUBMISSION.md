@@ -1,6 +1,12 @@
-# Hackyard submission (draft, not submitted)
+# Hackyard submission (submitted Wed Oct 21)
 
-Submit by **Fri Oct 23, noon ET** (hard deadline 2 PM ET / 18:00 UTC).
+Build page: https://hackyard.tech/yards/yard-5/93d4f01e-786c-4f7a-a621-1fc32691ae21
+
+Edits are allowed until judging starts, **Fri Oct 23, 18:00 UTC (2 PM ET)**. Still to fix on the build page (there's no edit button there yet, so ask @HackyardSocial on X):
+
+- [ ] Title shows as **"One"**; it should be **Ghost in the Machine: ASSISTANT.EXE**.
+- [ ] No play link; add https://ghost-in-the-machine-seven.vercel.app as the demo.
+- [ ] Add the demo video, if one is recorded.
 
 ## Write-up (474 / 500 characters)
 
