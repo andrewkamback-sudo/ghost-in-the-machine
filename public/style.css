@@ -215,8 +215,8 @@ body.wait, body.wait * { cursor: wait !important; }
 #defrag-grid { display: block; width: 116px; height: 32px; image-rendering: pixelated; background: #fff; box-shadow: inset 1px 1px grey; }
 .defrag-status { font-size: 10px; line-height: 12px; margin-top: 2px; white-space: pre; }
 
-/* A split-second frame over the whole window (one at a time, under 3 a second; never in calm mode). */
-#flash { position: fixed; inset: 0; z-index: 1000; pointer-events: none; display: grid; place-items: center; text-align: center; padding: 5vw; }
-#flash-text { max-width: 90vw; }
-#flash.pal { background: navy; color: #fff; font: 700 clamp(22px, 4.5vw, 64px)/1.1 "Pixelated MS Sans Serif", sans-serif; }
-#flash.wren { background: #050005; color: var(--wren-dark); font: clamp(32px, 6.5vw, 96px)/0.95 "VT323", monospace; text-shadow: 4px 0 var(--blood); }
+/* A split-second frame over the game screen (one at a time, under 3 a second; never in calm mode),
+   sized in the screen's own 512x384 pixels so the longest line fits at any zoom. */
+#flash { position: absolute; inset: 0; z-index: 1000; pointer-events: none; display: grid; place-items: center; text-align: center; padding: 24px; }
+#flash.pal { background: navy; color: #fff; font: 700 40px/1.1 "Pixelated MS Sans Serif", sans-serif; }
+#flash.wren { background: #050005; color: var(--wren-dark); font: 60px/0.95 "VT323", monospace; text-shadow: 2px 0 var(--blood); }

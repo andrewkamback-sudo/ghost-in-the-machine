@@ -171,3 +171,29 @@ test('booting while Test sound is still playing keeps the game hum on', async ({
   const a = await page.evaluate(async () => (await import('/sfx.js')).debug());
   expect(a.rms).toBeGreaterThan(0.005);
 });
+
+test('flash frames fit their text inside the game screen', async ({ page }) => {
+  await page.setViewportSize({ width: 1728, height: 1000 }); // a 16-inch MacBook, where the old sizing overflowed
+  await page.goto('/?offline=1&nopost=1&demo=1');
+  await page.locator('#name').fill('Sam');
+  await page.locator('#name').press('Enter');
+  await page.locator('#setup-next').click();
+  await page.getByRole('button', { name: 'OK', exact: true }).click();
+  const stop = declineAsks(page);
+  // Each frame shows for a split second, so measure it in the page the moment it appears.
+  await page.evaluate(() => {
+    window.flashes = [];
+    const f = document.getElementById('flash');
+    new MutationObserver(() => requestAnimationFrame(() => {
+      if (f.hidden) return;
+      const t = document.getElementById('flash-text').getBoundingClientRect();
+      const s = document.getElementById('screen').getBoundingClientRect();
+      window.flashes.push({ kind: f.className, inside: t.top >= s.top && t.bottom <= s.bottom && t.left >= s.left && t.right <= s.right });
+    })).observe(f, { attributes: true, childList: true, subtree: true });
+  });
+  await page.waitForFunction(() => window.flashes.some((x) => x.kind === 'wren'), null, { timeout: 60000 });
+  stop();
+  const seen = await page.evaluate(() => window.flashes);
+  expect(seen.map((x) => x.kind)).toEqual(expect.arrayContaining(['pal', 'wren']));
+  expect(seen.filter((x) => !x.inside)).toEqual([]);
+});
