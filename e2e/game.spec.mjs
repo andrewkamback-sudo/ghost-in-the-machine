@@ -1,6 +1,10 @@
 // A full offline run to FREED, keyboard only, in every engine on every OS.
 import { test, expect } from '@playwright/test';
 
+// Linux and Windows CI runners have no sound card, so audio never starts there.
+// The tests that need audible sound run on macOS CI and on real machines.
+const noSoundCard = !!process.env.CI && process.platform !== 'darwin';
+
 // The story asks for the real-machine haunts as it goes (voice, notifications, a file,
 // a window, the camera). This player says no to each, like a cautious player would.
 function declineAsks(page) {
@@ -73,6 +77,7 @@ test('boot to FREED offline, by keyboard', async ({ page }) => {
 });
 
 test('sound: audio is running and audible after boot, and Sound off silences it', async ({ page }) => {
+  test.skip(noSoundCard, 'no sound card on this CI runner');
   await page.goto('/?offline=1&nopost=1');
   await page.locator('#name').fill('Sam');
   await page.locator('#name').press('Enter');
@@ -131,6 +136,7 @@ test('Start menu opens files, and Shut Down is refused', async ({ page }) => {
 });
 
 test('Test sound lasts about 2.5 s, a second click stops it, and the hum still starts at boot', async ({ page }) => {
+  test.skip(noSoundCard, 'no sound card on this CI runner');
   const rms = async () => (await page.evaluate(async () => (await import('/sfx.js')).debug())).rms;
   await page.goto('/?offline=1&nopost=1');
   await page.locator('#name').fill('Sam');
@@ -155,6 +161,7 @@ test('Test sound lasts about 2.5 s, a second click stops it, and the hum still s
 });
 
 test('booting while Test sound is still playing keeps the game hum on', async ({ page }) => {
+  test.skip(noSoundCard, 'no sound card on this CI runner');
   await page.goto('/?offline=1&nopost=1');
   await page.locator('#name').fill('Sam');
   await page.locator('#name').press('Enter');
